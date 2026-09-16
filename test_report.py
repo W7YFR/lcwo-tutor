@@ -211,6 +211,42 @@ check('operator filters partition every run', osum === graded.length);
 const daysum = days.reduce((n, d) => n + filterRuns({...EMPTY, from:d, to:d}).length, 0);
 check('day filters partition every run', daysum === graded.length);
 
+// ---- speed: averaged up top, broken down at the bottom ----
+setFilter({...EMPTY});
+const sp = meanSpeed(graded);
+const want = graded.reduce((n, r) => n + +S[r.sid].charWpm, 0) / graded.length;
+check('the average is weighted by runs, not sessions',
+      Math.abs(sp.char - want) < 1e-9, sp.char + ' vs ' + want);
+check('the range covers every speed in scope',
+      sp.charRange[0] === Math.min(...graded.map(r => +S[r.sid].charWpm))
+      && sp.charRange[1] === Math.max(...graded.map(r => +S[r.sid].charWpm)));
+const split = speedSplit(graded);
+check('the split partitions every run with a speed',
+      split.reduce((n, s) => n + s.runs.length, 0) === graded.filter(hasSpeed).length);
+check('the split is one entry per distinct pair',
+      split.length === new Set(graded.map(r => `${+S[r.sid].charWpm}/${+S[r.sid].effWpm}`)).size,
+      split.map(s => s.k).join(' '));
+check('the split is most-practised first',
+      split.every((s, i) => !i || split[i - 1].runs.length >= s.runs.length));
+const top = document.getElementById('app').innerHTML;
+check('the wpm tile leads the headline',
+      top.indexOf('wpm') < top.indexOf('chars copied'));
+check('the scope line carries the speed too',
+      /wpm/.test(document.getElementById('scopeline').innerHTML));
+check('a varying speed is labelled as an average',
+      top.includes('average of ' + split.length + ' speeds')
+      && document.getElementById('scopeline').innerHTML.includes('avg '));
+check('the breakdown appears when speeds differ', top.includes('Speeds in scope'));
+// one session is one speed, so the breakdown would be a single row
+const oneSpeed = DATA.sessions[0];
+setFilter({sid: String(oneSpeed.id)});
+const solo = document.getElementById('app').innerHTML;
+check('the breakdown is dropped when there is nothing to break down',
+      !solo.includes('Speeds in scope'));
+check('and the tile says so plainly',
+      solo.includes('character / effective') && !solo.includes('average of'));
+setFilter({...EMPTY});
+
 // ---- the threshold applies to the whole filter, not to each day ----
 setFilter({...EMPTY});
 const combined = trouble(stats(filterRuns(F)));

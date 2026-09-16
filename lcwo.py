@@ -1318,6 +1318,42 @@ function children(f, runs){
   return by(r => r.gid, k => G[k].label, k => G[k].label.replace(/ · .*/, ''));
 }
 
+/* ---------- speed ----------
+   Speed is a property of the session, so any scope wider than one can hold
+   several. The tile averages over runs (a session you ran three times counts
+   three times, because that is how much practice happened at that speed) and
+   the breakdown at the bottom shows the split. */
+const speedOf = r => S[r.sid];
+const hasSpeed = r => speedOf(r).charWpm != null;
+
+function meanSpeed(runs){
+  const known = runs.filter(hasSpeed);
+  if (!known.length) return null;
+  const mean = k => known.reduce((n, r) => n + +speedOf(r)[k], 0) / known.length;
+  const range = k => {
+    const v = known.map(r => +speedOf(r)[k]);
+    return [Math.min(...v), Math.max(...v)];
+  };
+  return {char: mean('charWpm'), eff: mean('effWpm'),
+          charRange: range('charWpm'), effRange: range('effWpm'),
+          known: known.length, missing: runs.length - known.length};
+}
+
+/* one entry per distinct char/eff pair, most practised first */
+function speedSplit(runs){
+  const out = new Map();
+  for (const r of runs.filter(hasSpeed)){
+    const s = speedOf(r), k = `${+s.charWpm}/${+s.effWpm}`;
+    if (!out.has(k)) out.set(k, []);
+    out.get(k).push(r);
+  }
+  return [...out.entries()]
+    .map(([k, rs]) => ({k, runs: rs, sessions: new Set(rs.map(r => r.sid)).size}))
+    .sort((a, b) => b.runs.length - a.runs.length || a.k.localeCompare(b.k));
+}
+
+const num = v => Number.isInteger(v) ? String(v) : v.toFixed(1);
+
 /* ---------- render helpers ---------- */
 const tile = (n, l, d) => `<div class="tile"><div class="n">${esc(n)}</div>
   <div class="l">${esc(l)}</div>${d ? `<div class="d">${d}</div>` : ''}</div>`;
@@ -1390,7 +1426,20 @@ function panelHeadline(runs, st){
              ${Math.abs(d).toFixed(1)} pts</span>`;
   }
   const best = perRun.length ? Math.max(...perRun) : 0;
+  const sp = meanSpeed(runs);
+  let spTile;
+  if (!sp){
+    spTile = tile('—', 'wpm', 'speed not recorded');
+  } else {
+    const vary = sp.charRange[0] !== sp.charRange[1] || sp.effRange[0] !== sp.effRange[1];
+    const note = vary
+      ? `average of ${speedSplit(runs).length} speeds`
+      : 'character / effective';
+    spTile = tile(`${num(sp.char)}/${num(sp.eff)}`, 'wpm',
+                  note + (sp.missing ? ` · ${sp.missing} run(s) unrecorded` : ''));
+  }
   return `<div class="tiles">
+    ${spTile}
     ${tile(st.chars, 'chars copied')}
     ${tile(st.wrong, 'chars wrong')}
     ${tile(st.pctWrong.toFixed(1) + '%', 'percent wrong')}
@@ -1524,6 +1573,30 @@ function panelChars(st){
       ${kinds.map(([, l]) => `<th class="num">${l}</th>`).join('')}
       <th>Miss rate</th>`, rows)}
     </details></div>`;
+}
+
+function panelSpeeds(runs){
+  const split = speedSplit(runs);
+  if (split.length < 2) return '';  // the tile already says it
+  const rows = split.map(s => {
+    const st = stats(s.runs);
+    const days = [...new Set(s.runs.map(r => r.day))].sort();
+    return `<tr><td class="mono" style="font-weight:700">${esc(s.k)}</td>
+      <td class="num">${s.sessions}</td>
+      <td class="num">${s.runs.length}</td>
+      <td class="num">${st.chars}</td>
+      <td class="num">${st.wrong}</td>
+      <td class="num" style="font-weight:700;color:hsl(${
+        hue(st.pctRight, 50).toFixed(0)} 62% var(--barL))">${st.pctRight.toFixed(1)}%</td>
+      <td>${esc(days.length > 1 ? `${fmtDayShort(days[0])} – ${fmtDayShort(days[days.length - 1])}`
+                                : fmtDayShort(days[0]))}</td></tr>`;
+  });
+  return `<div class="panel"><h3>Speeds in scope</h3>
+    ${table(`<th>wpm</th><th class="num">Sessions</th><th class="num">Runs</th>
+      <th class="num">Chars</th><th class="num">Wrong</th>
+      <th class="num">Correct</th><th>When</th>`, rows)}
+    <p class="none" style="margin:.6rem 0 0">Character speed / effective (Farnsworth)
+    speed. The tile at the top averages these across runs.</p></div>`;
 }
 
 function panelContext(f, runs){
@@ -1696,10 +1769,14 @@ function render(){
   const dys = [...new Set(runs.map(r => r.day))].sort();
   const span = dys.length > 1 ? `${fmtDay(dys[0])} – ${fmtDay(dys[dys.length - 1])}`
     : fmtDay(dys[0]);
+  const sp = meanSpeed(runs);
+  const varies = sp && (sp.charRange[0] !== sp.charRange[1]
+                        || sp.effRange[0] !== sp.effRange[1]);
   document.getElementById('scopeline').innerHTML =
     `<b>${esc(filterLabel(F))}</b> — ${grps} group${grps === 1 ? '' : 's'},
      ${sess} session${sess === 1 ? '' : 's'}, ${runs.length} run${runs.length === 1 ? '' : 's'}
-     · ${esc(span)}`;
+     · ${esc(span)}`
+    + (sp ? ` · <b>${varies ? 'avg ' : ''}${num(sp.char)}/${num(sp.eff)} wpm</b>` : '');
 
   const app = document.getElementById('app');
   if (!runs.length){
@@ -1707,7 +1784,8 @@ function render(){
     return;
   }
   app.innerHTML = panelHeadline(runs, st) + panelPractice(F, runs, st)
-    + panelProgress(F, runs) + panelRuns(F, runs) + panelChars(st) + panelContext(F, runs);
+    + panelProgress(F, runs) + panelRuns(F, runs) + panelChars(st)
+    + panelSpeeds(runs) + panelContext(F, runs);
 
   app.querySelectorAll('tr.click').forEach(tr => {
     tr.onclick = () => {

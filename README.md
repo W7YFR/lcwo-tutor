@@ -83,6 +83,12 @@ is set:
 - **Confusions** — `Y → L ×5`, `K → R ×4`. Usually the most useful panel: a
   consistent substitution means two rhythms you are conflating, which needs a
   different fix from a character you simply do not know
+- **Speed** — the first tile, and repeated in the sticky bar so it stays with
+  you while scrolling. Speed belongs to the session, so anything wider than one
+  can hold several; the tile averages across runs and says `avg` when it varies
+- **Speeds in scope** — the breakdown at the bottom: every character/effective
+  pair you practised at, with sessions, runs, chars and accuracy, so *"am I
+  actually worse at 30 wpm"* is one glance rather than a guess
 - **Accuracy per run** — hover any point for its run and score
 - **Runs in scope** — click a row to see exactly what went wrong, group by group
 

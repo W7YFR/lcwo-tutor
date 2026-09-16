@@ -50,6 +50,25 @@ threshold. Thresholding per day and unioning would answer a different and much
 less useful question ("did I have a bad day with this letter"), and would drop
 exactly the characters that are quietly wrong all week.
 
+## Showing speed
+
+Speed lives on the session, so every scope wider than one session can hold
+several — the tile has to summarise. It averages **across runs**, not across
+sessions: a session you ran three times represents three times the practice at
+that speed, and weighting by session would let a one-run session at an unusual
+speed drag the figure around.
+
+The tile leads the headline row and the same figure is repeated in the sticky
+scope line, prefixed `avg` when the underlying speeds differ, so it stays
+visible while scrolling. Runs whose session never recorded a speed are excluded
+from the mean rather than counted as zero, and the tile says how many were left
+out.
+
+`Speeds in scope` at the bottom is the detail: one row per distinct
+character/effective pair, most practised first, with its own accuracy. It hides
+itself when there is only one speed, because then the tile has already said
+everything and a one-row table is just furniture.
+
 ## Carrying settings forward
 
 Two levels, deliberately different:
