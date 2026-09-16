@@ -1817,6 +1817,15 @@ def cyan(t):
     return c(t, "36")
 
 
+def magenta(t):
+    return c(t, "35")
+
+
+def pad(text, width, plain) -> str:
+    """Left-justify coloured text. `:<n` cannot: it counts escape codes."""
+    return text + " " * max(0, width - len(plain))
+
+
 def rule(title=""):
     w = 66
     if title:
@@ -1919,6 +1928,23 @@ def read_paste(prompt: str) -> str:
 # --------------------------------------------------------------------------
 
 
+CELL_COLOUR = {"correct": lambda t: t, "missed": red, "wrong": red,
+               "transposed": magenta, "extra": yellow}
+
+
+def colour_recv(gr: GroupCell) -> tuple[str, str]:
+    """(coloured, plain) for what you copied, marking only what went wrong.
+
+    Colouring the whole group hides the thing you want to see - which letter
+    in QUT was the one you dropped. A position you did not reach at all shows
+    as `_`, so a short group looks short.
+    """
+    if not gr.cells:
+        return red("--"), "--"
+    return ("".join(CELL_COLOUR[cell.kind](cell.recv or "_") for cell in gr.cells),
+            "".join(cell.recv or "_" for cell in gr.cells))
+
+
 def print_run_summary(g: RunGrade, label: str) -> None:
     pct = g.pct_right
     color = green if pct >= 95 else (yellow if pct >= 85 else red)
@@ -1940,8 +1966,10 @@ def print_run_summary(g: RunGrade, label: str) -> None:
             elif cell.kind == "extra":
                 detail.append(f"extra {cell.recv}")
         note = "transposed" if gr.transposed else ", ".join(detail)
-        print(f"      #{gr.idx + 1:>2}  sent {bold(gr.sent or '--'):<6} "
-              f"got {red(gr.recv or '--'):<6}  {dim(note)}")
+        sent = gr.sent or "--"
+        got, got_plain = colour_recv(gr)
+        print(f"      #{gr.idx + 1:>2}  sent {pad(bold(sent), 6, sent)} "
+              f"got {pad(got, 6, got_plain)}  {dim(note)}")
     if len(bad) > 12:
         print(dim(f"      ... and {len(bad) - 12} more"))
 
@@ -3056,6 +3084,30 @@ def cmd_selftest(args) -> int:
         check("a long trouble list still leaves room to mix",
               sum(len(set(g)) > 1 for g in wide) >= 3)
         check("and still covers every character", set("".join(wide)) == set("ABCDEFGH"))
+
+        # only the characters that went wrong are marked, not the whole group
+        was_tty = _TTY
+        globals()["_TTY"] = True  # colour is off when piped; force it on to look
+        try:
+            veg, veg_plain = colour_recv(grade_group(0, "VEG", "VTG"))
+            qdm = colour_recv(grade_group(0, "QDM", "QUT"))[0]
+            short = colour_recv(grade_group(0, "ABCDE", "ABC"))[1]
+            trans = colour_recv(grade_group(0, "WM", "MW"))[0]
+            extra = colour_recv(grade_group(0, "ABC", "ABCD"))[0]
+            padded, padded_want = pad(red("X"), 4, "X"), red("X") + "   "
+        finally:
+            globals()["_TTY"] = was_tty
+        check("correct characters stay uncoloured", veg.startswith("V\033[31m"))
+        check("only the wrong character is red", veg.count("\033[31m") == 1)
+        check("the plain form is the copied group", veg_plain == "VTG")
+        check("two wrong characters, two marks", qdm.count("\033[31m") == 2)
+        check("a dropped tail shows as underscores", short == "ABC__")
+        check("a transposition is not marked as wrong",
+              "\033[31m" not in trans and "\033[35m" in trans)
+        check("an extra character is its own colour", "\033[33m" in extra)
+        check("padding counts characters, not escape codes", padded == padded_want)
+        check("colour is dropped when output is not a terminal",
+              _TTY or colour_recv(grade_group(0, "VEG", "VTG"))[0] == "VTG")
 
         # a new assignment starts from the speed the last one finished at
         speedy = create_group(con, assignment="SPEEDY", label="SPEEDY")
