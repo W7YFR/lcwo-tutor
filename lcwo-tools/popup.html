@@ -1,0 +1,54 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>lcwo-tools</title>
+<style>
+  :root { color-scheme: light dark; --ink:#1b1b19; --muted:#6b6b66; --line:#d8d7d2;
+          --bg:#fff; --panel:#f6f5f2; --accent:#3b5bdb; --ok:#2f8f5b; --bad:#c0392b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e8e8e6; --muted:#9a9a95; --line:#33363c; --bg:#1e2024;
+            --panel:#26292e; --accent:#7f9cf5; --ok:#5fbf8a; --bad:#f0736a; }
+  }
+  * { box-sizing: border-box; }
+  body { width: 320px; margin: 0; padding: 12px; background: var(--bg); color: var(--ink);
+         font: 13px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  h1 { font-size: 13px; margin: 0 0 2px; letter-spacing: .02em; }
+  p.sub { margin: 0 0 10px; color: var(--muted); font-size: 11.5px; }
+  textarea { width: 100%; height: 66px; resize: vertical; padding: 7px 8px;
+             border: 1px solid var(--line); border-radius: 7px; background: var(--panel);
+             color: var(--ink); font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+             letter-spacing: .06em; }
+  label.row { display: flex; align-items: center; gap: 6px; margin: 9px 0;
+              color: var(--muted); font-size: 12px; }
+  .buttons { display: flex; gap: 7px; align-items: center; }
+  button { font: inherit; font-weight: 600; padding: 6px 12px; border-radius: 7px;
+           border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+           cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #status { margin: 9px 0 0; font-size: 11.5px; color: var(--muted); min-height: 2.6em; }
+  #status.ok { color: var(--ok); }
+  #status.bad { color: var(--bad); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a { color: var(--accent); }
+  a code { color: inherit; }
+</style>
+
+<h1>lcwo-tools</h1>
+<p class="sub">Open <a href="https://lcwo.net/cwsettings" target="_blank"
+   rel="noreferrer"><code>lcwo.net/cwsettings</code></a>, paste your list, hit Apply.</p>
+
+<textarea id="chars" placeholder="L,F,U,D,H,Y,Z,B,G,P,Q" spellcheck="false"></textarea>
+
+<label class="row">
+  <input type="checkbox" id="replace" checked>
+  Untick everything else (set exactly this list)
+</label>
+
+<div class="buttons">
+  <button id="apply" class="primary" type="button">Apply</button>
+  <button id="read" type="button">Read page</button>
+</div>
+
+<p id="status">From the CLI: <code>make trouble LIST=1</code></p>
+
+<script src="popup.js"></script>

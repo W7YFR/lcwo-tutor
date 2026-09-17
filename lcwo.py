@@ -30,7 +30,9 @@ import json
 import os
 import random
 import re
+import shutil
 import sqlite3
+import subprocess
 import sys
 import webbrowser
 from collections import Counter, defaultdict
@@ -876,6 +878,42 @@ class GroupView:
     @property
     def graded_runs(self) -> list[RunView]:
         return [r for s in self.sessions for r in s.runs if r.grade]
+
+
+# Whatever this machine has, in the order worth trying.
+CLIPBOARD_CMDS = (
+    ("pbcopy",),                                # macOS
+    ("wl-copy",),                               # Wayland
+    ("xclip", "-selection", "clipboard"),       # X11
+    ("xsel", "--clipboard", "--input"),         # X11, the other one
+    ("clip.exe",),                              # WSL / Windows
+)
+
+
+def clipboard_cmd() -> tuple[str, ...] | None:
+    return next((c for c in CLIPBOARD_CMDS if shutil.which(c[0])), None)
+
+
+def copy_to_clipboard(text: str) -> str | None:
+    """Copy, returning the tool used - or None if this machine has none.
+
+    A missing clipboard is not an error worth stopping for: the list is on
+    screen either way.
+    """
+    cmd = clipboard_cmd()
+    if not cmd:
+        return None
+    try:
+        subprocess.run(cmd, input=text.encode(), check=True)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return cmd[0]
+
+
+def top_half(trouble: list[tuple[str, int]]) -> list[tuple[str, int]]:
+    """The worse half of a trouble list, rounded up - a practice set small
+    enough to actually work on, taken off a list that is already worst-first."""
+    return trouble[:max(1, (len(trouble) + 1) // 2)] if trouble else []
 
 
 def trouble_from(counts: Counter, threshold: int = TROUBLE_THRESHOLD) -> list[tuple[str, int]]:
@@ -2427,14 +2465,34 @@ def cmd_trouble(args) -> int:
     op, _views, window, counts, sent = counts_in_scope(con, args)
     tr = trouble_from(counts, args.threshold)
     scope = scope_label(args, op, window)
+    half = ",".join(ch for ch, _ in top_half(tr))
+    copied = copy_to_clipboard(half) if args.copy and half else None
+    if args.copy and half and not copied:
+        print(yellow("  ! no clipboard tool found (pbcopy, wl-copy, xclip, xsel)"),
+              file=sys.stderr)
+    if args.list:  # bare list, for piping into lcwo-tools or the clipboard
+        print(half)
+        if copied:  # to stderr, so `--list` stays pipeable
+            print(dim(f"  copied to the clipboard ({copied})"), file=sys.stderr)
+        con.close()
+        return 0
     rule(f"Trouble letters — {scope} (missed {args.threshold}+ times)")
     if not tr:
         print(dim("  none yet"))
-    for ch, n in tr:
+    cut = len(top_half(tr))
+    for i, (ch, n) in enumerate(tr):
         s = sent.get(ch, 0)
         rate = f"{100.0 * n / s:.0f}%" if s else "-"
         bar = "█" * min(30, n)
-        print(f"  {bold(ch)}  missed {n:>3} of {s:>3} sent  ({rate:>4})  {red(bar)}")
+        edge = dim("  ◀ worst half ends here") if i + 1 == cut and cut < len(tr) else ""
+        print(f"  {bold(ch)}  missed {n:>3} of {s:>3} sent  ({rate:>4})  {red(bar)}{edge}")
+    if tr:
+        print(dim(f"\n  worst half ({cut} of {len(tr)}) —"
+                  " paste into the lcwo-tools extension:"))
+        print("  " + bold(half))
+        print(dim(f"  ✓ copied to the clipboard ({copied})" if copied
+                  else "  (just the list: `make trouble LIST=1`,"
+                       " clipboard: `make trouble PB=1`)"))
     con.close()
     return 0
 
@@ -2985,6 +3043,27 @@ def cmd_selftest(args) -> int:
     check("LCWO disagreement caught", gm.groups[0].disagrees_with_lcwo)
 
     check("trouble threshold", trouble_from(Counter({"A": 2, "B": 1})) == [("A", 2)])
+    check("top half of an even list", [c for c, _ in top_half(
+        [("A", 9), ("B", 8), ("C", 7), ("D", 6)])] == ["A", "B"])
+    check("top half of an odd list rounds up", [c for c, _ in top_half(
+        [("A", 9), ("B", 8), ("C", 7)])] == ["A", "B"])
+    check("a single trouble letter is its own half",
+          top_half([("A", 9)]) == [("A", 9)])
+    check("nothing in, nothing out", top_half([]) == [])
+
+    # the clipboard is a convenience, never a failure
+    real_which = shutil.which
+    try:
+        shutil.which = lambda name, *a, **k: None
+        check("no clipboard tool, no clipboard", clipboard_cmd() is None)
+        check("and copying just says so", copy_to_clipboard("ABC") is None)
+        shutil.which = lambda name, *a, **k: "/usr/bin/" + name if name == "xclip" else None
+        check("it picks the tool this machine actually has",
+              clipboard_cmd() == ("xclip", "-selection", "clipboard"))
+        shutil.which = lambda name, *a, **k: "/usr/bin/" + name
+        check("and prefers the first that works", clipboard_cmd() == ("pbcopy",))
+    finally:
+        shutil.which = real_which
 
     # end-to-end through the db + report
     import tempfile
@@ -3408,6 +3487,10 @@ def main(argv=None) -> int:
     t.add_argument("-n", "--threshold", type=int, default=TROUBLE_THRESHOLD)
     t.add_argument("-d", "--days", type=int, metavar="N",
                    help="only the last N days you practised")
+    t.add_argument("-l", "--list", action="store_true",
+                   help="print only the worst half, comma separated")
+    t.add_argument("-p", "--copy", action="store_true",
+                   help="copy the worst half to the clipboard")
     t.set_defaults(fn=cmd_trouble)
 
     k = sub.add_parser("key", help="attach a results table to an ungraded session")

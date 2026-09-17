@@ -13,9 +13,10 @@ lcwo.db
 # publishes everything lcwo.db holds. Rebuild any time with `make report`.
 reports/
 exports/
-# catches `lcwo.py report -o somewhere.html` landing in the tree; this project
-# has no other HTML, so the blanket rule costs nothing
+# catches `lcwo.py report -o somewhere.html` landing in the tree
 *.html
+# ...except the browser extension, which is source
+!lcwo-tools/*.html
 
 *.bak
 

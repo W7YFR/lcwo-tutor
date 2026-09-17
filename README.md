@@ -110,6 +110,23 @@ make trouble D=7 N=3    missed 3+ times over the last 7
 `D=2` still means your last two sessions' worth. Same threshold rule as the
 report: the count is the total over the whole window.
 
+## Setting up the next practice set
+
+`make trouble` ends with the worst half of the list, ready to paste:
+
+```
+  worst half (11 of 21) — paste into the lcwo-tools extension:
+  L,F,U,D,H,Y,Z,B,G,P,Q
+```
+
+`make trouble PB=1` puts it straight on the clipboard, `make trouble LIST=1`
+prints just that line for piping,
+and [lcwo-tools/](lcwo-tools/) is a small Chrome extension that takes the list
+and ticks the matching boxes on `lcwo.net/cwsettings`. LCWO lays those ~150
+checkboxes out in Koch order rather than alphabetically, so doing it by hand
+means hunting for every character. See [its README](lcwo-tools/README.md) to
+install it.
+
 ## Sending practice
 
 The copy side tells you which characters you are missing; `make practice` turns
@@ -159,7 +176,7 @@ make practice SEED=7       the same set again
 | `make report` | rebuild the HTML report and open it |
 | `make user` | who is on file, and who is being recorded for |
 | `make groups` | list groups with accuracy and trouble letters |
-| `make trouble` | trouble letters — `D=2` for the last 2 practice days, `N=3` for the threshold |
+| `make trouble` | trouble letters — `D=2` for the last 2 practice days, `N=3` for the threshold, `LIST=1` for just the worst half, `PB=1` to copy it |
 | `make practice` | sending practice built from those letters — same `D=`/`N=`, `PAIRS=1` for confusions |
 | `make merge` | fold groups that share an assignment into one (`APPLY=1` to write) |
 | `make delete G=11` | move a group (or `S=`/`R=`) to the bin — reversible |

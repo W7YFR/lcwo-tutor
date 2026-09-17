@@ -40,9 +40,10 @@ user:
 groups:
 	@$(LCWO) groups $(OP) $(ALL)
 
-## trouble: trouble letters  [D=<last N days>] [N=<threshold>] [G=<group>]
+## trouble: trouble letters  [D=<days>] [N=<threshold>] [G=] [LIST=1] [PB=1]
 trouble:
-	@$(LCWO) trouble $(if $(D),-d $(D)) $(if $(N),-n $(N)) $(if $(G),-g $(G)) $(OP) $(ALL)
+	@$(LCWO) trouble $(if $(D),-d $(D)) $(if $(N),-n $(N)) $(if $(G),-g $(G)) \
+		$(if $(LIST),--list) $(if $(PB),--copy) $(OP) $(ALL)
 
 ## practice: sending practice from trouble letters  [D= N= C= CHARS= PAIRS=1]
 practice:
@@ -87,10 +88,13 @@ db:
 merge:
 	@$(LCWO) merge $(if $(APPLY),--apply)
 
-## test: run the Python checks and the browser-side report tests
+## test: run the Python checks and the browser-side tests
 test:
 	@$(LCWO) selftest
 	@$(PYTHON) test_report.py
+	@printf '\n\033[1m── extension %s\033[0m\n' "─────────────────────────────────────────────────"
+	@command -v node >/dev/null && node lcwo-tools/test_popup.js \
+		|| echo "  node not found - skipping extension tests"
 
 ## clean: remove Python bytecode caches (leaves the database and reports alone)
 clean:
@@ -108,5 +112,6 @@ help:
 	@echo "  variables: U= operator  G= group  S= session  R= run"
 	@echo "             D= last N practice days   N= trouble threshold"
 	@echo "             C= how many groups   CHARS= practise these instead"
+	@echo "             LIST=1 just the letters   PB=1 copy them to the clipboard"
 	@echo "             CHAR=/EFF= wpm   Y=1 skip prompt   APPLY=1 write merge"
 	@echo "             EVERYONE=1 every operator at once"
