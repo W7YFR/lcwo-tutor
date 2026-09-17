@@ -24,22 +24,55 @@ $ make trouble PB=1        # ...and it is on your clipboard
 L,F,U,D,H,Y,Z,B,G,P,Q
 ```
 
-Open `lcwo.net/cwsettings`, click the extension, paste, **Apply**. Then click
-**Submit** on the LCWO page — the extension ticks the boxes, it does not save
-for you.
+Click the extension, paste, **Apply**. What happens next depends on where you
+are:
+
+| You are on | Apply does |
+|---|---|
+| `lcwo.net/cwsettings` | ticks the boxes and leaves you on the form — you click **Submit** |
+| any other LCWO page | goes to the settings, ticks, saves, and returns you to the page you were on |
+| anywhere else | refuses — it will not navigate an unrelated tab |
+
+So from **Code Groups**: paste, Apply, and you are back on Code Groups a second
+later with the new character set live. The popup closes as soon as the tab
+navigates — that is Chrome, not a bug — so the work runs in the service worker
+and the outcome comes back on the toolbar badge (**✓** or **!**). Open the
+popup again to read what happened.
 
 - **Untick everything else** (on by default) makes the page match your list
   exactly. Turn it off to add to what's already selected.
 - **Read page** goes the other way: fills the box with what's currently ticked,
   so you can see or keep a set.
 - Characters not on the page are reported rather than silently dropped.
+- The round trip **reads the saved page back** before leaving it. If what came
+  back is not what you asked for, it says so and leaves you on the settings
+  page rather than claiming success.
 
 ## Permissions
 
-`activeTab`, `scripting`, `storage` — and no host permissions, so it can see
-nothing at all until you click the icon, and then only the tab you clicked on.
-`storage` is local only; it remembers your last list so the popup reopens where
-you left it. Nothing leaves your machine.
+`activeTab`, `scripting`, `storage`, and host access to `https://lcwo.net/*`.
+
+The host permission is what lets the round trip keep working across the
+navigations it makes (settings → save → back); `activeTab` alone is scoped to
+the page you clicked on. It is limited to LCWO over HTTPS, and the URL check is
+anchored, so a lookalike like `evil-lcwo.net` is refused rather than scripted.
+`storage` is local only — it remembers your last list so the popup reopens
+where you left it. Nothing leaves your machine.
+
+## Files
+
+| | |
+|---|---|
+| `page.js` | the functions that run *inside* the LCWO page, plus the URL routing |
+| `background.js` | the service worker: navigate → tick → save → verify → return |
+| `popup.js` | the popup, kept thin because it gets dismissed mid-flight |
+| `popup.html` | markup and styles |
+
+The split matters. `chrome.tabs.update` on the active tab dismisses the popup,
+and a dismissed popup takes its JavaScript with it — driven from there, the
+round trip died right after the first navigation and left you on the settings
+page with nothing ticked. Anything that outlives a navigation belongs in the
+worker.
 
 ## Tests
 
@@ -51,4 +84,12 @@ The page-side functions are plain, self-contained functions (`chrome.scripting`
 serialises them into the page, so they cannot close over anything) and the test
 runs them against a small DOM shim built from the real markup — including the
 awkward bits: `charquot` for `"`, Cyrillic that must not collide with Latin,
-and the unrelated inputs sitting among the checkboxes.
+the unrelated inputs sitting among the checkboxes, and the character boxes
+sitting *outside* the `<form>`.
+
+That last one is worth knowing about: LCWO closes `</form>` before the table
+cell holding the character checkboxes, so by the DOM those boxes have no form
+owner and a plain submit would leave them out of the POST. Before clicking
+Submit the extension gives the form an id and sets `form="..."` on any box that
+is not already owned. Boxes the form does own are untouched, so this quietly
+becomes a no-op if LCWO ever fixes the markup.

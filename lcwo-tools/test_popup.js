@@ -8,7 +8,8 @@
  *     node lcwo-tools/test_popup.js
  */
 
-const {parseChars, applyInPage, readInPage} = require('./popup.js');
+const {parseChars, applyInPage, readInPage, planFor, submitInPage, sameChars}
+  = require('./page.js');
 const POPUP_HTML = require('fs').readFileSync(__dirname + '/popup.html', 'utf8');
 
 let FAIL = 0;
@@ -115,6 +116,85 @@ check('reading turns charquot back into a quote',
 check('read output feeds straight back in',
       applyInPage(parseChars(readInPage().chars.join(',')), true).missing.length === 0);
 
+/* ---------- where Apply should do its work ---------- */
+const plan = u => planFor(u);
+check('the settings page is handled in place',
+      plan('https://lcwo.net/cwsettings').mode === 'inplace');
+check('a query string does not change that',
+      plan('https://lcwo.net/cwsettings?saved=1').mode === 'inplace');
+check('another LCWO page means go, save, come back',
+      JSON.stringify(plan('https://lcwo.net/groups'))
+      === JSON.stringify({mode: 'roundtrip', back: 'https://lcwo.net/groups', from: '/groups'}));
+check('the return trip keeps the whole URL',
+      plan('https://lcwo.net/courselesson?l=12#x').back === 'https://lcwo.net/courselesson?l=12#x');
+check('www is still LCWO', plan('https://www.lcwo.net/groups').mode === 'roundtrip');
+check('a lookalike domain is refused', !!plan('https://evil-lcwo.net/groups').error);
+check('a subdomain is refused', !!plan('https://lcwo.net.example.com/groups').error);
+check('plain http is refused', !!plan('http://lcwo.net/groups').error);
+check('an unrelated site is refused', !!plan('https://example.com/').error);
+check('no url at all is refused', !!plan('').error && !!plan(undefined).error);
+check('a chrome page is refused', !!plan('chrome://extensions').error);
+
+/* ---------- submitting ---------- */
+(function () {
+  const clicks = [];
+  const form = {id: ''};
+  const btn = {tag: 'input', type: 'submit', form, click: () => clicks.push(1)};
+  // LCWO's character boxes sit outside the <form>, so form is null on them
+  const orphan = n => ({tag: 'input', type: 'checkbox', name: 'char' + n, form: null,
+                        attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }});
+  const boxes = [orphan('L'), orphan('F')];
+  const owned = {tag: 'input', type: 'checkbox', name: 'charU', form,
+                 attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }};
+  global.window = {};
+  global.document = {
+    querySelector: sel => (/submit/.test(sel) ? btn : null),
+    querySelectorAll: () => [...boxes, owned],
+  };
+  const r = submitInPage();
+  check('submit clicks the page\'s own button', r.ok === true && clicks.length === 1);
+  check('and marks the document so the reload can be detected',
+        global.window.__lcwoPending === 1);
+  check('boxes outside the form are adopted so they get POSTed',
+        r.adopted === 2 && boxes.every(b => b.attrs.form === 'lcwo-tools-form'));
+  check('the form gets an id to be adopted into', form.id === 'lcwo-tools-form');
+  check('a box the form already owns is left alone',
+        owned.attrs.form === undefined);
+  global.document = {querySelector: () => null, querySelectorAll: () => []};
+  check('no Submit button is reported, not thrown', !!submitInPage().error);
+})();
+
+/* ---------- verifying the save ---------- */
+check('a matching read-back counts as saved', sameChars(['L', 'F', 'U'], ['U', 'L', 'F']));
+check('case does not matter', sameChars(['l', 'f'], ['F', 'L']));
+check('a missing character is not a match', !sameChars(['L', 'F'], ['L', 'F', 'U']));
+check('an extra character is not a match', !sameChars(['L', 'F', 'U'], ['L', 'F']));
+check('nothing back from an empty ask still matches', sameChars([], []));
+check('nothing back from a real ask does not', !sameChars([], ['L']));
+check('duplicates do not break the comparison', sameChars(['L', 'L', 'F'], ['F', 'L']));
+
+/* ---------- the wiring that made the first attempt fail ---------- */
+const MANIFEST = JSON.parse(require('fs').readFileSync(__dirname + '/manifest.json', 'utf8'));
+const BG = require('fs').readFileSync(__dirname + '/background.js', 'utf8');
+const POPUP_JS = require('fs').readFileSync(__dirname + '/popup.js', 'utf8');
+
+// Navigating the active tab dismisses the popup, taking its JS with it - the
+// flow has to run somewhere that outlives it.
+check('a service worker is registered',
+      !!(MANIFEST.background && MANIFEST.background.service_worker === 'background.js'));
+check('the worker, not the popup, drives the round trip',
+      /chrome\.tabs\.update/.test(BG) && !/chrome\.tabs\.update/.test(POPUP_JS));
+check('the worker loads the shared page functions',
+      /importScripts\('page\.js'\)/.test(BG));
+check('the popup asks the worker rather than doing it itself',
+      /chrome\.runtime\.sendMessage/.test(POPUP_JS));
+check('the message listener keeps the channel open for its async reply',
+      /return true;/.test(BG));
+check('a result the popup never hears is still recorded',
+      /storage\.local\.set/.test(BG) && /setBadgeText/.test(BG));
+check('host access is scoped to LCWO over https',
+      JSON.stringify(MANIFEST.host_permissions) === '["https://lcwo.net/*"]');
+
 /* ---------- the popup itself ---------- */
 check('the settings page is a real link',
       /<a href="https:\/\/lcwo\.net\/cwsettings"/.test(POPUP_HTML));
@@ -124,6 +204,9 @@ check('and it opens in a new tab rather than replacing the popup',
 // while doing nothing at all
 check('no inline event handlers', !/<[^>]+\son[a-z]+=/i.test(POPUP_HTML));
 check('no inline script', !/<script(?![^>]*\ssrc=)/i.test(POPUP_HTML));
+check('page.js loads before popup.js',
+      POPUP_HTML.indexOf('page.js') > -1
+      && POPUP_HTML.indexOf('page.js') < POPUP_HTML.indexOf('popup.js'));
 
 /* ---------- wrong page ---------- */
 page([], []);

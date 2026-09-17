@@ -3,7 +3,17 @@
   "name": "lcwo-tools",
   "version": "1.0.0",
   "description": "Paste a character list and tick the matching boxes on LCWO's CW settings page.",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://lcwo.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "lcwo-tools"

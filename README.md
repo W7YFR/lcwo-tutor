@@ -124,8 +124,11 @@ prints just that line for piping,
 and [lcwo-tools/](lcwo-tools/) is a small Chrome extension that takes the list
 and ticks the matching boxes on `lcwo.net/cwsettings`. LCWO lays those ~150
 checkboxes out in Koch order rather than alphabetically, so doing it by hand
-means hunting for every character. See [its README](lcwo-tools/README.md) to
-install it.
+means hunting for every character.
+
+From any other LCWO page — Code Groups, say — Apply goes to the settings, ticks,
+saves, and drops you back where you were, so changing your practice set is a
+paste and a click. See [its README](lcwo-tools/README.md) to install it.
 
 ## Sending practice
 
