@@ -52,18 +52,21 @@ function applyInPage(wanted, replace) {
 }
 
 /*
- * Where Apply should do its work, decided from the tab's URL alone.
+ * Where Apply should do its work, decided from the tab's URL alone. Every mode
+ * ticks and saves; they differ only in which tab and where you end up.
  *
- *   on /cwsettings      - tick the boxes and leave you looking at the form
- *   elsewhere on LCWO   - go to the settings, tick, save, come back
- *   anywhere else       - refuse; navigating somebody's unrelated tab is rude
+ *   on /cwsettings      - tick, save, stay put
+ *   elsewhere on LCWO   - go to the settings, tick, save, come back here
+ *   anywhere else       - open a new tab, tick, save, land on Code Groups;
+ *                         the tab you were on is never touched
  */
 function planFor(urlString) {
   let u;
   try { u = new URL(urlString || ''); } catch (e) { u = null; }
-  // the hostname test is anchored: "evil-lcwo.net" must not look like LCWO
-  if (!u || u.protocol !== 'https:' || !/^(www\.)?lcwo\.net$/i.test(u.hostname))
-    return {error: 'Open an LCWO page first.'};
+  // The hostname test is anchored: "evil-lcwo.net" is not LCWO, and falling
+  // through to a new tab means a page like that is never scripted at all.
+  const lcwo = u && u.protocol === 'https:' && /^(www\.)?lcwo\.net$/i.test(u.hostname);
+  if (!lcwo) return {mode: 'newtab', back: 'https://lcwo.net/groups', from: '/groups'};
   return u.pathname === '/cwsettings'
     ? {mode: 'inplace'}
     : {mode: 'roundtrip', back: u.href, from: u.pathname};

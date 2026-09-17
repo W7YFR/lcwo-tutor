@@ -28,10 +28,11 @@ $('apply').addEventListener('click', async () => {
   try {
     const tab = await activeTab();
     const plan = planFor(tab.url);
-    if (plan.error) return say(plan.error, 'bad');
     remember();
-    say(plan.mode === 'inplace' ? 'Ticking…'
-        : 'Opening the settings page, saving, and coming back…');
+    say({inplace: 'Ticking and saving…',
+         roundtrip: 'Opening the settings page, saving, and coming back…',
+         newtab: 'Opening LCWO in a new tab, saving, and going to Code Groups…',
+        }[plan.mode]);
     // If the tab navigates, this popup closes and the reply never arrives -
     // the worker still finishes, and leaves the outcome on the badge.
     const r = await chrome.runtime.sendMessage(

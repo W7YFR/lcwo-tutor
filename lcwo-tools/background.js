@@ -46,37 +46,37 @@ const tally = (r, chars) => [
 
 async function applyFlow({tabId, url, chars, replace}) {
   const plan = planFor(url);
-  if (plan.error) return {ok: false, message: plan.error};
 
-  if (plan.mode === 'inplace') {
-    const r = await run(tabId, applyInPage, [chars, replace]);
-    if (!r) return {ok: false, message: 'Nothing came back - is this an LCWO page?'};
-    if (r.error) return {ok: false, message: r.error};
-    return {ok: !r.missing.length,
-            message: tally(r, chars) + '. Click Submit on the page to save.'};
+  // get a tab that is showing the settings page, without touching anyone else's
+  let target = tabId;
+  if (plan.mode === 'newtab') {
+    target = (await chrome.tabs.create({url: SETTINGS, active: true})).id;
+  } else if (plan.mode === 'roundtrip') {
+    await chrome.tabs.update(target, {url: SETTINGS});
   }
+  if (plan.mode !== 'inplace') await waitInPage(target, atSettings, 'the settings page');
 
-  await chrome.tabs.update(tabId, {url: SETTINGS});
-  await waitInPage(tabId, atSettings, 'the settings page');
-
-  const r = await run(tabId, applyInPage, [chars, replace]);
+  const r = await run(target, applyInPage, [chars, replace]);
   if (!r || r.error) return {ok: false, message: (r && r.error) || 'Could not reach the page.'};
 
-  const s = await run(tabId, submitInPage);
+  const s = await run(target, submitInPage);
   if (s && s.error) return {ok: false, message: s.error};
-  await waitInPage(tabId, reloaded, 'the save to finish');
+  await waitInPage(target, reloaded, 'the save to finish');
 
-  // trust nothing: read the reloaded page back before leaving it
-  const after = await run(tabId, readInPage);
-  const saved = after && !after.error && sameChars(after.chars, chars);
-  if (!saved) {
+  // trust nothing: read the reloaded page back before going anywhere
+  const after = await run(target, readInPage);
+  if (!(after && !after.error && sameChars(after.chars, chars))) {
     return {ok: false,
             message: `Applied, but the settings page came back with `
-                     + `${after && after.chars ? after.chars.join(',') || 'nothing' : 'nothing'}`
+                     + `${after && after.chars && after.chars.length
+                          ? after.chars.join(',') : 'nothing'}`
                      + ` - left you on it to look.`};
   }
-  await chrome.tabs.update(tabId, {url: plan.back});
-  return {ok: true, message: `${tally(r, chars)}. Saved, and back to ${plan.from}.`};
+
+  if (!plan.back) return {ok: true, message: `${tally(r, chars)}. Saved.`};
+  await chrome.tabs.update(target, {url: plan.back});
+  return {ok: true, message: `${tally(r, chars)}. Saved, `
+          + `${plan.mode === 'newtab' ? 'and opened' : 'and back to'} ${plan.from}.`};
 }
 
 async function badge(text, colour) {

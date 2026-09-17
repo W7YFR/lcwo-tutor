@@ -29,9 +29,14 @@ are:
 
 | You are on | Apply does |
 |---|---|
-| `lcwo.net/cwsettings` | ticks the boxes and leaves you on the form — you click **Submit** |
-| any other LCWO page | goes to the settings, ticks, saves, and returns you to the page you were on |
-| anywhere else | refuses — it will not navigate an unrelated tab |
+| `lcwo.net/cwsettings` | ticks, saves, leaves you on the form |
+| any other LCWO page | goes to the settings, ticks, saves, returns you to the page you were on |
+| anywhere else | opens a **new tab**, ticks, saves, and lands it on Code Groups |
+
+Every route saves — you never have to click Submit yourself. The tab you were
+on is only ever navigated if it was already an LCWO page; from anywhere else
+the work happens in a tab of its own, so a page that merely *looks* like LCWO
+(`evil-lcwo.net`) is never scripted at all.
 
 So from **Code Groups**: paste, Apply, and you are back on Code Groups a second
 later with the new character set live. The popup closes as soon as the tab
@@ -44,7 +49,7 @@ popup again to read what happened.
 - **Read page** goes the other way: fills the box with what's currently ticked,
   so you can see or keep a set.
 - Characters not on the page are reported rather than silently dropped.
-- The round trip **reads the saved page back** before leaving it. If what came
+- Every route **reads the saved page back** before going anywhere. If what came
   back is not what you asked for, it says so and leaves you on the settings
   page rather than claiming success.
 

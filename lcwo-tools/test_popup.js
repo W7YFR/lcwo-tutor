@@ -118,8 +118,9 @@ check('read output feeds straight back in',
 
 /* ---------- where Apply should do its work ---------- */
 const plan = u => planFor(u);
-check('the settings page is handled in place',
-      plan('https://lcwo.net/cwsettings').mode === 'inplace');
+check('the settings page is handled in place, staying put',
+      plan('https://lcwo.net/cwsettings').mode === 'inplace'
+      && !plan('https://lcwo.net/cwsettings').back);
 check('a query string does not change that',
       plan('https://lcwo.net/cwsettings?saved=1').mode === 'inplace');
 check('another LCWO page means go, save, come back',
@@ -128,12 +129,20 @@ check('another LCWO page means go, save, come back',
 check('the return trip keeps the whole URL',
       plan('https://lcwo.net/courselesson?l=12#x').back === 'https://lcwo.net/courselesson?l=12#x');
 check('www is still LCWO', plan('https://www.lcwo.net/groups').mode === 'roundtrip');
-check('a lookalike domain is refused', !!plan('https://evil-lcwo.net/groups').error);
-check('a subdomain is refused', !!plan('https://lcwo.net.example.com/groups').error);
-check('plain http is refused', !!plan('http://lcwo.net/groups').error);
-check('an unrelated site is refused', !!plan('https://example.com/').error);
-check('no url at all is refused', !!plan('').error && !!plan(undefined).error);
-check('a chrome page is refused', !!plan('chrome://extensions').error);
+
+// Anywhere else opens a new tab and lands on Code Groups. The point is that
+// the page you were on is never navigated and never scripted.
+const elsewhere = ['https://example.com/', 'https://evil-lcwo.net/groups',
+                   'https://lcwo.net.example.com/groups', 'http://lcwo.net/groups',
+                   'chrome://extensions', '', undefined];
+check('anything else opens a new tab instead',
+      elsewhere.every(u => plan(u).mode === 'newtab'),
+      elsewhere.map(u => plan(u).mode).join(','));
+check('and that new tab ends up on Code Groups',
+      elsewhere.every(u => plan(u).back === 'https://lcwo.net/groups'
+                           && plan(u).from === '/groups'));
+check('a lookalike domain never counts as LCWO',
+      plan('https://evil-lcwo.net/cwsettings').mode === 'newtab');
 
 /* ---------- submitting ---------- */
 (function () {
@@ -192,6 +201,16 @@ check('the message listener keeps the channel open for its async reply',
       /return true;/.test(BG));
 check('a result the popup never hears is still recorded',
       /storage\.local\.set/.test(BG) && /setBadgeText/.test(BG));
+// the in-place case used to hand back "click Submit yourself" and return early
+const beforeSubmit = BG.slice(BG.indexOf('async function applyFlow'),
+                              BG.indexOf('submitInPage'));
+check('no mode reports success before it has submitted',
+      !/return \{ok: true/.test(beforeSubmit));
+check('there is one submit for all three modes',
+      (BG.match(/run\(target, submitInPage\)/g) || []).length === 1);
+check('only the new-tab mode creates a tab', /chrome\.tabs\.create/.test(BG));
+check('the tab you were on is never scripted in new-tab mode',
+      /target = \(await chrome\.tabs\.create/.test(BG));
 check('host access is scoped to LCWO over https',
       JSON.stringify(MANIFEST.host_permissions) === '["https://lcwo.net/*"]');
 
