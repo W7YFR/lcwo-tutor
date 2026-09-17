@@ -201,6 +201,10 @@ check('the message listener keeps the channel open for its async reply',
       /return true;/.test(BG));
 check('a result the popup never hears is still recorded',
       /storage\.local\.set/.test(BG) && /setBadgeText/.test(BG));
+check('success ticks the badge and then clears it',
+      /badge\('✓'/.test(BG)
+      && /setTimeout\(\(\) => chrome\.action\.setBadgeText\(\{text: ''\}\), 1000\)/.test(BG));
+check('failure raises a mark and leaves it', /badge\('!'/.test(BG));
 // the in-place case used to hand back "click Submit yourself" and return early
 const beforeSubmit = BG.slice(BG.indexOf('async function applyFlow'),
                               BG.indexOf('submitInPage'));

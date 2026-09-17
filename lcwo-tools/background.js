@@ -7,8 +7,10 @@
  * flow died immediately after the first navigation: you landed on the settings
  * page with nothing ticked. The worker outlives the popup, so it finishes.
  *
- * Progress comes back two ways: the reply to the popup's message if it is
- * still open, and a badge plus a stored result if it is not.
+ * The popup is usually gone by the time this finishes, since the navigation
+ * dismisses it. So the result is stored for the next time the popup opens, and
+ * the toolbar badge carries the outcome: a tick that blinks and goes, or a
+ * failure mark that waits to be read.
  */
 
 importScripts('page.js');
@@ -91,7 +93,15 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
     .catch(e => ({ok: false, message: String((e && e.message) || e)}))
     .then(async result => {
       await chrome.storage.local.set({lastResult: {...result, at: Date.now()}});
-      await badge(result.ok ? '✓' : '!', result.ok ? '#1aa9ff' : '#c0392b');
+      if (result.ok) {
+        await badge('✓', '#1aa9ff');
+        // long enough to catch, short enough not to nag
+        setTimeout(() => chrome.action.setBadgeText({text: ''}), 1000);
+      } else {
+        // a failure waits until you open the popup and read it - an error
+        // nobody saw is the worse bug
+        await badge('!', '#c0392b');
+      }
       try { respond(result); } catch (e) { /* popup already gone; the badge has it */ }
     });
   return true;   // keep the message channel open for the async reply

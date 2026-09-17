@@ -39,10 +39,13 @@ the work happens in a tab of its own, so a page that merely *looks* like LCWO
 (`evil-lcwo.net`) is never scripted at all.
 
 So from **Code Groups**: paste, Apply, and you are back on Code Groups a second
-later with the new character set live. The popup closes as soon as the tab
-navigates — that is Chrome, not a bug — so the work runs in the service worker
-and the outcome comes back on the toolbar badge (**✓** or **!**). Open the
-popup again to read what happened.
+later with the new character set live.
+
+The popup closes as soon as the tab navigates — that is Chrome dismissing it,
+not a bug — so the work runs in the service worker and the outcome lands on the
+**toolbar badge**: `…` while it works, then a blue `✓` that blinks for a second
+and goes. A red `!` means something went wrong and stays until you open the
+popup, which shows the full message and clears it.
 
 - **Untick everything else** (on by default) makes the page match your list
   exactly. Turn it off to add to what's already selected.
