@@ -3,36 +3,52 @@
 <title>lcwo-tools</title>
 <style>
   :root { color-scheme: light dark; --ink:#1b1b19; --muted:#6b6b66; --line:#d8d7d2;
-          --bg:#fff; --panel:#f6f5f2; --accent:#3b5bdb; --ok:#2f8f5b; --bad:#c0392b; }
+          --bg:#fff; --panel:#f6f5f2; --accent:#1aa9ff; --ok:#2f8f5b; --bad:#c0392b;
+          --surround:#dedcd6; --on-accent:#041a28; }
   @media (prefers-color-scheme: dark) {
     :root { --ink:#e8e8e6; --muted:#9a9a95; --line:#33363c; --bg:#1e2024;
-            --panel:#26292e; --accent:#7f9cf5; --ok:#5fbf8a; --bad:#f0736a; }
+            --panel:#26292e; --accent:#1aa9ff; --ok:#5fbf8a; --bad:#f0736a;
+            --surround:#0e0f12; --on-accent:#041a28; }
   }
   * { box-sizing: border-box; }
-  body { width: 320px; margin: 0; padding: 12px; background: var(--bg); color: var(--ink);
+  input, button { accent-color: var(--accent); }
+  /* The popup *window* is a native widget: whether its outer corners are round
+     is the browser's call, and no CSS here reaches it. A radius on <body> is
+     doubly useless - with no background on <html> the body's background
+     propagates to the document canvas, which is painted as a plain rectangle.
+     So the rounded surface is an element inside, on a surround dark enough to
+     show its corners. */
+  html, body { background: var(--surround); }
+  body { width: 320px; margin: 0; padding: 8px; color: var(--ink);
          font: 13px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .card { background: var(--bg); border: 1px solid var(--accent); border-radius: 12px;
+          padding: 13px; overflow: hidden; }
   h1 { font-size: 13px; margin: 0 0 2px; letter-spacing: .02em; }
   p.sub { margin: 0 0 10px; color: var(--muted); font-size: 11.5px; }
-  textarea { width: 100%; height: 66px; resize: vertical; padding: 7px 8px;
-             border: 1px solid var(--line); border-radius: 7px; background: var(--panel);
+  textarea { width: 100%; height: 66px; resize: vertical; padding: 8px 9px;
+             border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
              color: var(--ink); font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
              letter-spacing: .06em; }
   label.row { display: flex; align-items: center; gap: 6px; margin: 9px 0;
               color: var(--muted); font-size: 12px; }
   .buttons { display: flex; gap: 7px; align-items: center; }
-  button { font: inherit; font-weight: 600; padding: 6px 12px; border-radius: 7px;
+  button { font: inherit; font-weight: 600; padding: 6px 13px; border-radius: 9px;
            border: 1px solid var(--line); background: var(--panel); color: var(--ink);
            cursor: pointer; }
   button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* white on #1aa9ff is about 2.5:1 - too little to read a button label by */
+  button.primary { background: var(--accent); border-color: var(--accent);
+                   color: var(--on-accent); }
   #status { margin: 9px 0 0; font-size: 11.5px; color: var(--muted); min-height: 2.6em; }
   #status.ok { color: var(--ok); }
   #status.bad { color: var(--bad); }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  label.row input[type=checkbox] { border-radius: 4px; }
   a { color: var(--accent); }
   a code { color: inherit; }
 </style>
 
+<div class="card">
 <h1>lcwo-tools</h1>
 <p class="sub">Open <a href="https://lcwo.net/cwsettings" target="_blank"
    rel="noreferrer"><code>lcwo.net/cwsettings</code></a>, paste your list, hit Apply.</p>
@@ -49,6 +65,7 @@
   <button id="read" type="button">Read page</button>
 </div>
 
-<p id="status">From the CLI: <code>make trouble LIST=1</code></p>
+<p id="status">From the CLI: <code>make trouble PB=1</code></p>
+</div>
 
 <script src="popup.js"></script>
