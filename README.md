@@ -199,6 +199,7 @@ make practice SEED=7       the same set again
 | `make db` | SQLite shell on the database |
 | `make key` | grade a session you left unfinished |
 | `make speed` | show or set a group's wpm — `G=2 CHAR=25 EFF=6` |
+| `make export` | write the whole database as JSON for the extension |
 | `make test` | run the Python and browser test suites |
 | `make build` | run the checks, then zip the extension for sharing |
 

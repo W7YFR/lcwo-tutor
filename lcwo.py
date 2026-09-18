@@ -44,6 +44,7 @@ from pathlib import Path
 APP_DIR = Path(os.environ.get("LCWO_HOME", Path(__file__).resolve().parent))
 DB_PATH = Path(os.environ.get("LCWO_DB", APP_DIR / "lcwo.db"))
 REPORT_DIR = Path(os.environ.get("LCWO_REPORTS", APP_DIR / "reports"))
+EXPORT_DIR = Path(os.environ.get("LCWO_EXPORTS", APP_DIR / "exports"))
 
 # Extend this list as new LCWO drills get added.
 MODES = [
@@ -2639,6 +2640,88 @@ def cmd_report(args) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# export
+# --------------------------------------------------------------------------
+
+EXPORT_FORMAT = "lcwo-export"
+EXPORT_VERSION = 1
+
+
+def export_records(con) -> dict:
+    """Every row, shaped the way the browser keeps them.
+
+    Two differences from the tables. JSON columns come out as real arrays,
+    because IndexedDB stores structure natively and there is no reason to
+    keep a string of a list inside a file that is already JSON. And binned
+    rows come too: an export is the whole database, bin included, or
+    restoring from one would quietly empty it.
+    """
+    def rows(table):
+        return [dict(r) for r in con.execute(f"SELECT * FROM {table} ORDER BY id")]
+
+    sessions = []
+    for s in rows("sessions"):
+        raw = s.pop("key_json")
+        s["key"] = json.loads(raw) if raw else None
+        sessions.append(s)
+
+    runs = []
+    for r in rows("runs"):
+        attempt, reported = r.pop("attempt_json"), r.pop("reported_json")
+        r["attempt"] = json.loads(attempt)
+        r["reported"] = json.loads(reported) if reported else None
+        # raw_paste rides along: it is the original evidence, and an export
+        # you cannot restore from without losing something is not a backup
+        r["source"] = "import"
+        runs.append(r)
+
+    return {
+        "operators": rows("operators"),
+        "groups": rows("groups"),
+        "sessions": sessions,
+        "runs": runs,
+        "settings": [dict(r) for r in con.execute(
+            "SELECT key, value FROM settings ORDER BY key")],
+    }
+
+
+def export_data(con) -> dict:
+    return {"format": EXPORT_FORMAT, "version": EXPORT_VERSION,
+            "exported_at": now_iso(), "records": export_records(con)}
+
+
+def cmd_export(args) -> int:
+    """The whole database as one JSON file, for the browser extension.
+
+    Deliberately a thing you run, not a thing that runs itself.
+    """
+    con = connect()
+    data = export_data(con)
+    text = json.dumps(data, separators=(",", ":")) if args.compact \
+        else json.dumps(data, indent=2)
+
+    if args.out == "-":
+        print(text)
+        con.close()
+        return 0
+
+    out = Path(args.out) if args.out else (
+        EXPORT_DIR / f"lcwo-{now_iso()[:10]}.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text + "\n")
+
+    rule("Export")
+    n = data["records"]
+    print(f"  {len(n['operators'])} operator(s), {len(n['groups'])} group(s), "
+          f"{len(n['sessions'])} session(s), {len(n['runs'])} run(s)")
+    kb = out.stat().st_size / 1024
+    print(green(f"  ✓ {out}") + dim(f"  ({kb:.1f} KB)"))
+    print(dim("  load it in the extension: Import, then pick this file"))
+    con.close()
+    return 0
+
+
 def cmd_key(args) -> int:
     """Attach a results table to a session that was left ungraded."""
     con = connect()
@@ -3090,6 +3173,46 @@ def cmd_selftest(args) -> int:
         check("payload carries verdicts", payload["runs"][1]["cells"][7] == ["HR", "SR", "wc"])
         check("payload has no raw '<'", "<" not in blob)
 
+        # the export the browser extension reads
+        ex = export_data(con)
+        check("an export says what it is",
+              ex["format"] == EXPORT_FORMAT and ex["version"] == EXPORT_VERSION)
+        check("and when it was taken", bool(ex["exported_at"]))
+        recs = ex["records"]
+        check("it carries every table",
+              set(recs) == {"operators", "groups", "sessions", "runs", "settings"})
+        check("the session key comes out as a list, not a string",
+              recs["sessions"][0]["key"] == pr.key
+              and "key_json" not in recs["sessions"][0])
+        check("so does the attempt",
+              recs["runs"][0]["attempt"] == ["EH", "SM", ".R"]
+              and "attempt_json" not in recs["runs"][0])
+        check("a run with no reported counts exports null",
+              recs["runs"][0]["reported"] is None)
+        check("and one with them exports the list",
+              recs["runs"][1]["reported"] == pr.reported)
+        check("raw_paste rides along, so nothing is lost on the way out",
+              recs["runs"][0]["raw_paste"] == "raw")
+        check("the export is JSON with nothing exotic in it",
+              json.loads(json.dumps(ex))["records"]["runs"][1]["attempt"] == pr.groups)
+
+        # binned rows come too: an export that quietly empties the bin is not
+        # something you can restore from
+        binned = create_group(con, "letters", "binned", 20, 10, label="binned")
+        bs = start_session(con, get_group(con, binned))
+        add_run(con, bs["id"], ["EH"], "raw")
+        con.execute("UPDATE groups SET deleted_at=? WHERE id=?", (now_iso(), binned))
+        con.commit()
+        recs2 = export_data(con)["records"]
+        check("a binned group is still exported",
+              any(g["id"] == binned for g in recs2["groups"]))
+        check("and it is still marked as binned",
+              next(g for g in recs2["groups"] if g["id"] == binned)["deleted_at"])
+        check("its rows come with it",
+              any(x["group_id"] == binned for x in recs2["sessions"]))
+        check("while the live listing still hides it",
+              all(g["id"] != binned for g in all_groups(con)))
+
         # resuming: the most recently worked group is what `record` offers first
         check("last_group finds the recent group", last_group(con)["id"] == gid)
         older = create_group(con, "letters", "old", 20, 10, label="older",
@@ -3481,6 +3604,12 @@ def main(argv=None) -> int:
     r.add_argument("-o", "--out", help="output path")
     r.add_argument("--open", action="store_true", help="open in a browser")
     r.set_defaults(fn=cmd_report)
+
+    ex = sub.add_parser("export", help="write the whole database as JSON")
+    ex.add_argument("-o", "--out", help='file to write, or "-" for stdout')
+    ex.add_argument("--compact", action="store_true",
+                    help="one line instead of indented")
+    ex.set_defaults(fn=cmd_export)
 
     t = sub.add_parser("trouble", help="show trouble letters")
     t.add_argument("-g", "--group", type=int)

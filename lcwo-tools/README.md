@@ -85,7 +85,7 @@ The port is in steps, each one usable on its own:
 1. **the core and the store** - grading, rollups, practice generators, data
    layer. Done; no UI, but every check the CLI's selftest runs now runs here.
 2. **import** - `lcwo.py export` into IndexedDB, so the rest is built against
-   real practice data rather than fixtures.
+   real practice data rather than fixtures. Done; the data page below.
 3. **the report** - as an extension page reading IndexedDB, live instead of a
    generated file.
 4. **trouble and practice** in the popup, wired straight into the applier
@@ -93,6 +93,30 @@ The port is in steps, each one usable on its own:
 5. **capture** - buttons on `/groups` that record a run, and picking up LCWO's
    own grading when you submit.
 6. **export**, and a note in the popup of how long since the last one.
+
+## Moving your practice in and out
+
+The database lives in this browser profile, so there are two doors.
+
+```
+python3 lcwo.py export        # writes exports/lcwo-<date>.json
+```
+
+Open the extension's **Import / export practice data** link (or
+`chrome://extensions` → Details → Extension options), pick that file, and
+everything lands in IndexedDB. Import is a **restore, not a merge**: it
+replaces what is in the browser. Ids are kept, so importing the same file
+twice leaves one database rather than two.
+
+**Download a copy** goes the other way, and is the thing that makes the data
+yours rather than Chrome's. Nothing exports on a schedule - the page just
+tells you how long it has been.
+
+An export holds every operator, group, session and run, the bin included, and
+carries the original pasted text along with the parsed attempt so a round trip
+loses nothing. A file written by a newer version of lcwo is refused rather
+than half-read: a database that looks fine and grades wrong is worse than one
+that will not load.
 
 ## Layout
 
@@ -129,6 +153,7 @@ Each module reads its dependencies through `require` under node and off
 | `src/ext/background.js` | the service worker: navigate → tick → save → verify → return |
 | `src/ext/popup.js` | the popup, kept thin because it gets dismissed mid-flight |
 | `src/ext/popup.html` | markup and styles |
+| `src/ext/data.html` `data.js` | import, export, and what is in the database |
 
 The split matters. `chrome.tabs.update` on the active tab dismisses the popup,
 and a dismissed popup takes its JavaScript with it — driven from there, the

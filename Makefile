@@ -10,7 +10,7 @@ LCWO   := $(PYTHON) lcwo.py
 
 .DEFAULT_GOAL := session
 .PHONY: session record report html user groups trouble practice key speed delete \
-        restore trash purge db merge test build clean help
+        restore trash purge db merge export test build clean help
 
 # every data target takes U=<call sign> to work as another operator
 OP = $(if $(U),-u $(U))
@@ -87,6 +87,10 @@ db:
 ## merge: fold groups sharing an assignment into one  [APPLY=1 to write]
 merge:
 	@$(LCWO) merge $(if $(APPLY),--apply)
+
+## export: write the whole database as JSON for the extension  [O=<path>]
+export:
+	@$(LCWO) export $(if $(O),-o $(O)) $(if $(COMPACT),--compact)
 
 ## test: run the Python checks and the browser-side tests
 test:

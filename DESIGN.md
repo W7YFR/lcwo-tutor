@@ -354,6 +354,29 @@ does not need to: the checks are on the properties that matter (size, lengths,
 every character appearing, weighting favoring the worse ones), not on exact
 output.
 
+### The export is the contract between the two programs
+
+`lcwo.py export` writes the record shapes the browser store keeps, not the
+table shapes SQLite keeps: `key_json` and `attempt_json` come out as real
+arrays, because the file is already JSON and a string holding a list inside it
+helps nobody. `raw_paste` rides along even though the browser never writes one,
+so a round trip through an export loses nothing.
+
+Binned rows are exported too, still marked as binned. An export that quietly
+emptied the bin would not be something you could restore from.
+
+Import is a restore, not a merge: it replaces what is in the browser, and keeps
+ids so the same file imported twice is one database rather than two. A file
+claiming a newer format version is refused outright — the failure mode of
+guessing at a shape you do not know is a database that looks fine and grades
+wrong, which is the one outcome worth refusing to risk.
+
+Both sides are checked against the same real data rather than against each
+other's fixtures: exporting the live database and running the JS rollups over
+it reproduces the Python numbers exactly — every character's miss and sent
+count, every confusion pair, every per-group breakdown, the trouble list and
+the day windows.
+
 ### Deliberately not built yet
 
 - **No automatic export.** Export is a deliberate act, and the popup counts the

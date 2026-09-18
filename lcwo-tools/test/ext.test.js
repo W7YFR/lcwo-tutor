@@ -203,8 +203,10 @@ exports.run = function (check) {
         !!(MANIFEST.background && MANIFEST.background.service_worker));
   // Chrome reports a bad path as a load failure with no hint which key is
   // wrong, and moving a file is exactly when this breaks.
-  const named = [MANIFEST.background.service_worker, MANIFEST.action.default_popup]
-    .concat(Object.values(MANIFEST.icons || {}));
+  const named = [MANIFEST.background.service_worker, MANIFEST.action.default_popup,
+                 MANIFEST.options_page]
+    .concat(Object.values(MANIFEST.icons || {}))
+    .filter(Boolean);
   const missing = named.filter(
     f => !require('fs').existsSync(__dirname + '/../' + f));
   check('every file the manifest names is really there',
@@ -260,6 +262,33 @@ exports.run = function (check) {
   check('page.js loads before popup.js',
         POPUP_HTML.indexOf('page.js') > -1
         && POPUP_HTML.indexOf('page.js') < POPUP_HTML.indexOf('popup.js'));
+
+  /* ---------- the data page ---------- */
+  const DATA_HTML = require('fs').readFileSync(__dirname + '/../src/ext/data.html', 'utf8');
+  check('the popup can reach the data page',
+        /<a href="data\.html"/.test(POPUP_HTML));
+  check('and the manifest offers it as the options page',
+        MANIFEST.options_page === 'src/ext/data.html');
+  check('the data page has no inline handlers either',
+        !/<[^>]+\son[a-z]+=/i.test(DATA_HTML) && !/<script(?![^>]*\ssrc=)/i.test(DATA_HTML));
+  // every module the page pulls in, in dependency order, or it throws on load
+  const SCRIPTS = Array.from(DATA_HTML.matchAll(/<script src="([^"]+)"/g)).map(m => m[1]);
+  check('the namespace prelude is loaded first', SCRIPTS[0] === '../ns.js');
+  check('and data.js last', SCRIPTS[SCRIPTS.length - 1] === 'data.js');
+  const missingScripts = SCRIPTS.filter(
+    f => !require('fs').existsSync(__dirname + '/../src/ext/' + f));
+  check('every script the data page loads exists', !missingScripts.length,
+        missingScripts.join(', '));
+  // store.js reads clock/assign/schema off the namespace, so they have to be
+  // in the page before it
+  const before = (a, b) => SCRIPTS.indexOf(a) > -1 && SCRIPTS.indexOf(a) < SCRIPTS.indexOf(b);
+  check('dependencies load before the modules that read them',
+        before('../core/counter.js', '../core/grade.js')
+        && before('../core/grade.js', '../core/rollup.js')
+        && before('../data/schema.js', '../data/store.js')
+        && before('../core/clock.js', '../data/store.js')
+        && before('../core/assign.js', '../data/store.js')
+        && before('../data/schema.js', '../data/idb.js'));
 
   /* ---------- wrong page ---------- */
   page([], []);

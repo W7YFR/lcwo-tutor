@@ -1,0 +1,99 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>lcwo-tools · data</title>
+<style>
+  :root { color-scheme: light dark; --ink:#1b1b19; --muted:#6b6b66; --line:#d8d7d2;
+          --bg:#fff; --panel:#f6f5f2; --accent:#1aa9ff; --ok:#2f8f5b; --bad:#c0392b;
+          --surround:#dedcd6; --on-accent:#041a28; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e8e8e6; --muted:#9a9a95; --line:#33363c; --bg:#1e2024;
+            --panel:#26292e; --accent:#1aa9ff; --ok:#5fbf8a; --bad:#f0736a;
+            --surround:#0e0f12; --on-accent:#041a28; }
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--surround); }
+  body { margin: 0; padding: 24px 16px; color: var(--ink);
+         font: 14px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 620px; margin: 0 auto; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 18px; color: var(--muted); font-size: 12.5px; }
+  section { background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+            padding: 16px 18px; margin-bottom: 14px; }
+  section.key { border-color: var(--accent); }
+  h2 { font-size: 13px; margin: 0 0 10px; letter-spacing: .03em; text-transform: uppercase;
+       color: var(--muted); font-weight: 600; }
+  dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+       gap: 10px 14px; margin: 0; }
+  dt { color: var(--muted); font-size: 11.5px; }
+  dd { margin: 0; font-size: 19px; font-variant-numeric: tabular-nums; }
+  .meta { margin: 12px 0 0; color: var(--muted); font-size: 12px; }
+  button { font: inherit; font-weight: 600; padding: 7px 15px; border-radius: 9px;
+           border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+           cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent);
+                   color: var(--on-accent); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  input[type=file] { font: inherit; font-size: 12.5px; color: var(--muted); max-width: 100%; }
+  .note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+  #status { margin: 12px 0 0; font-size: 12.5px; min-height: 1.5em; color: var(--muted); }
+  #status.ok { color: var(--ok); }
+  #status.bad { color: var(--bad); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+         background: var(--panel); padding: 1px 5px; border-radius: 5px; }
+  a { color: var(--accent); }
+</style>
+
+<main>
+<h1>lcwo data</h1>
+<p class="sub">What this browser is holding, and how to move it in and out.</p>
+
+<section class="key">
+  <h2>In this browser</h2>
+  <dl>
+    <div><dt>Operators</dt><dd id="n-operators">–</dd></div>
+    <div><dt>Groups</dt><dd id="n-groups">–</dd></div>
+    <div><dt>Sessions</dt><dd id="n-sessions">–</dd></div>
+    <div><dt>Runs</dt><dd id="n-runs">–</dd></div>
+    <div><dt>Days</dt><dd id="n-days">–</dd></div>
+  </dl>
+  <p class="meta" id="span"></p>
+</section>
+
+<section>
+  <h2>Import</h2>
+  <div class="row">
+    <input type="file" id="file" accept="application/json,.json">
+  </div>
+  <p class="note">
+    From the CLI: <code>python3 lcwo.py export</code> writes one into
+    <code>exports/</code>. Importing <strong>replaces everything</strong> in this
+    browser — it is a restore, not a merge.
+  </p>
+</section>
+
+<section>
+  <h2>Export</h2>
+  <div class="row">
+    <button id="export" class="primary" type="button">Download a copy</button>
+    <span class="note" id="exported"></span>
+  </div>
+  <p class="note">
+    One JSON file holding every operator, group, session and run, the bin
+    included. Nothing exports on a schedule; this only happens when you ask.
+  </p>
+</section>
+
+<p id="status"></p>
+</main>
+
+<script src="../ns.js"></script>
+<script src="../core/counter.js"></script>
+<script src="../core/clock.js"></script>
+<script src="../core/grade.js"></script>
+<script src="../core/assign.js"></script>
+<script src="../core/rollup.js"></script>
+<script src="../data/schema.js"></script>
+<script src="../data/store.js"></script>
+<script src="../data/idb.js"></script>
+<script src="data.js"></script>

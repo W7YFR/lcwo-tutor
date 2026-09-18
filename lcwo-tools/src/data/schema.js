@@ -23,6 +23,11 @@
   const DB_NAME = 'lcwo';
   const DB_VERSION = 1;
 
+  /* The interchange format `lcwo.py export` writes. Bumped only when the
+     record shapes change in a way an older reader would get wrong. */
+  const EXPORT_FORMAT = 'lcwo-export';
+  const EXPORT_VERSION = 1;
+
   const STORES = {
     operators: {key: 'id', auto: true, indexes: {by_call: 'callsign'}},
     groups:    {key: 'id', auto: true, indexes: {by_operator: 'operator_id',
@@ -36,6 +41,8 @@
      Import walks this forwards, purge walks it backwards. */
   const RECORD_STORES = ['operators', 'groups', 'sessions', 'runs'];
 
+  X.EXPORT_FORMAT = EXPORT_FORMAT;
+  X.EXPORT_VERSION = EXPORT_VERSION;
   X.DB_NAME = DB_NAME;
   X.DB_VERSION = DB_VERSION;
   X.STORES = STORES;

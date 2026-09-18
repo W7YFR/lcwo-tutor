@@ -347,7 +347,8 @@ exports.run = async function (check) {
 
     const fresh = memoryBackend();
     const n = await store.load(fresh, JSON.parse(JSON.stringify(out)));
-    check('import reports what it loaded', n === 5);
+    check('import reports what it loaded',
+          same(n, {operators: 1, groups: 1, sessions: 1, runs: 2, settings: 1}), JSON.stringify(n));
     check('ids survive the round trip, so the rows stay joined up',
           (await store.loadAll(fresh, oid)).length === 1);
     const before = rollup.counts([rollup.groupView(await store.loadGroup(db, gid))]).miss;
@@ -363,5 +364,114 @@ exports.run = async function (check) {
 
     check('and something that is not an export is refused',
           await store.load(fresh, {format: 'nope'}).then(() => false, () => true));
+    check('as is nothing at all',
+          await store.load(fresh, null).then(() => false, () => true));
+
+    /* A file from a newer lcwo is refused rather than half-read: the failure
+       mode of guessing is a database that looks fine and grades wrong. */
+    const future = Object.assign({}, out, {version: 99});
+    check('an export from a newer version is refused',
+          await store.load(fresh, future).then(() => false, e => /newer version/.test(e.message)));
+    check('and one that does not say is refused too',
+          await store.load(fresh, Object.assign({}, out, {version: undefined}))
+            .then(() => false, () => true));
+  }
+
+  /* ---------- a file the CLI actually wrote ---------- */
+  //
+  // Shaped exactly as `lcwo.py export` writes it: JSON columns already
+  // unpacked into arrays, raw_paste riding along, is_final as 0/1, binned
+  // rows included. Synthetic, but the shape is the contract between the two
+  // programs and nothing else checks it.
+  {
+    const CLI_EXPORT = {
+      format: 'lcwo-export', version: 1, exported_at: '2026-09-17T20:28:51-07:00',
+      records: {
+        operators: [{id: 1, callsign: 'W0TST', name: 'Test Op',
+                     created_at: '2026-09-10T21:52:19-07:00', notes: null}],
+        groups: [
+          {id: 1, operator_id: 1, label: 'S1HW1', mode: 'letters', assignment: 'S1HW1',
+           char_wpm: 25, eff_wpm: 8, created_at: '2026-09-11T08:00:00-07:00',
+           closed_at: '2026-09-11T09:00:00-07:00', notes: null, source: null,
+           deleted_at: null},
+          {id: 2, operator_id: 1, label: 'BINNED', mode: 'letters', assignment: 'S1HW2',
+           char_wpm: 25, eff_wpm: 8, created_at: '2026-09-12T08:00:00-07:00',
+           closed_at: null, notes: null, source: null,
+           deleted_at: '2026-09-12T09:00:00-07:00'},
+        ],
+        sessions: [
+          {id: 1, group_id: 1, seq: 1, mode: 'letters', assignment: 'S1HW1',
+           char_wpm: 25, eff_wpm: 8, started_at: '2026-09-11T08:00:00-07:00',
+           ended_at: '2026-09-11T08:20:00-07:00', key: ['EH', 'SM', 'TR'],
+           notes: null, deleted_at: null},
+          {id: 2, group_id: 2, seq: 1, mode: 'letters', assignment: 'S1HW2',
+           char_wpm: 25, eff_wpm: 8, started_at: '2026-09-12T08:00:00-07:00',
+           ended_at: null, key: null, notes: null, deleted_at: null},
+        ],
+        runs: [
+          {id: 1, session_id: 1, seq: 1, is_final: 0,
+           recorded_at: '2026-09-11T08:10:00-07:00', attempt: ['EH', 'SM', '.R'],
+           reported: null, raw_paste: 'EH\nSM\n.R\n', source: 'import',
+           deleted_at: null},
+          {id: 2, session_id: 1, seq: 2, is_final: 1,
+           recorded_at: '2026-09-11T08:20:00-07:00', attempt: ['EH', 'SX', 'TR'],
+           reported: [0, 1, 0], raw_paste: 'Sent\tReceived\tErrors\n',
+           source: 'import', deleted_at: null},
+          {id: 3, session_id: 2, seq: 1, is_final: 0,
+           recorded_at: '2026-09-12T08:10:00-07:00', attempt: ['AB'],
+           reported: null, raw_paste: 'AB\n', source: 'import', deleted_at: null},
+        ],
+        settings: [{key: 'operator_id', value: '1'}],
+      },
+    };
+
+    const db = memoryBackend();
+    const counts = await store.load(db, CLI_EXPORT);
+    check('a CLI export loads', same(counts, {operators: 1, groups: 2, sessions: 2,
+                                              runs: 3, settings: 1}));
+    check('the binned group comes back binned, not gone',
+          (await store.liveGroups(db)).length === 1 && (await db.all('groups')).length === 2);
+    check('and its runs stay hidden by containment', (await store.liveRuns(db)).length === 2);
+    check('the current operator survives the trip',
+          (await store.currentOperator(db)).callsign === 'W0TST');
+
+    const view = rollup.groupView(await store.loadGroup(db, 1));
+    check('both runs grade against the key', view.gradedRuns.length === 2);
+    check('and the numbers are the ones the CLI would give',
+          same(rollup.counts([view]).miss, {T: 1, M: 1}));
+    check('LCWO\'s own error count is preserved',
+          same(view.sessions[0].runs[1].grade.groups[1].reported, 1));
+    check('raw_paste rides along so a re-export loses nothing',
+          (await db.get('runs', 1)).raw_paste === 'EH\nSM\n.R\n');
+    check('where it came from is remembered',
+          await store.getSetting(db, 'imported_from') === '2026-09-17T20:28:51-07:00');
+
+    /* the summary the data page shows */
+    const sum = await store.summary(db);
+    check('the summary counts only what is live',
+          sum.groups === 1 && sum.sessions === 1 && sum.runs === 2);
+    check('and says how many days are in there', sum.days === 1);
+    check('with the span of them',
+          sum.firstDay === '2026-09-11' && sum.lastDay === '2026-09-11');
+    check('the bin is counted separately', sum.binned === 1);
+    check('nothing has been exported from here yet', sum.exportedAt === null);
+    check('and there is no age to show for that',
+          store.daysSinceExport(sum) === null);
+
+    await store.setSetting(db, 'exported_at', '2026-09-15T08:00:00-07:00');
+    const sum2 = await store.summary(db);
+    check('once exported, the age is counted in days',
+          store.daysSinceExport(sum2, Date.parse('2026-09-17T08:00:00-07:00')) === 2);
+    check('exported today reads as zero',
+          store.daysSinceExport(sum2, Date.parse('2026-09-15T20:00:00-07:00')) === 0);
+    check('an unreadable stamp is no answer rather than a wrong one',
+          store.daysSinceExport({exportedAt: 'not a date'}) === null);
+
+    /* an empty database should not look broken */
+    const empty = memoryBackend();
+    const none = await store.summary(empty);
+    check('an empty database summarizes as empty',
+          none.groups === 0 && none.runs === 0 && none.days === 0
+          && none.firstDay === null && none.lastDay === null);
   }
 };

@@ -394,15 +394,60 @@
    * Ids are kept as they are so groups, sessions and runs stay joined up, and
    * so re-importing the same export twice is the same database rather than a
    * doubled one.
+   *
+   * A file from a newer version is refused rather than half-read: the failure
+   * mode of guessing is a database that looks fine and grades wrong.
    */
   async function load(db, data) {
-    if (!data || data.format !== 'lcwo-export') throw new Error('not an lcwo export');
+    if (!data || data.format !== schema.EXPORT_FORMAT) throw new Error('not an lcwo export');
+    const version = Number(data.version);
+    if (!(version >= 1)) throw new Error('that export does not say what version it is');
+    if (version > schema.EXPORT_VERSION) {
+      throw new Error('that export was written by a newer version of lcwo (format '
+                      + version + ', this reads ' + schema.EXPORT_VERSION + ')');
+    }
     const recs = data.records || {};
+    const counts = {};
     for (const store of schema.RECORD_STORES.concat(['settings'])) {
       await db.clear(store);
-      for (const rec of recs[store] || []) await db.put(store, rec);
+      const rows = recs[store] || [];
+      for (const rec of rows) await db.put(store, rec);
+      counts[store] = rows.length;
     }
-    return schema.RECORD_STORES.reduce((n, s) => n + (recs[s] || []).length, 0);
+    if (data.exported_at) await setSetting(db, 'imported_from', data.exported_at);
+    return counts;
+  }
+
+  /* What is in here, for the data page. Counts rows rather than grading them:
+     it runs on every page load and nothing here needs the numbers. */
+  async function summary(db) {
+    const groups = (await db.all('groups')).filter(g => !g.deleted_at);
+    const sessions = await liveSessions(db);
+    const runs = await liveRuns(db);
+    const days = Array.from(new Set(runs.map(r => String(r.recorded_at || '').slice(0, 10))))
+      .filter(Boolean).sort();
+    return {
+      operators: (await db.all('operators')).length,
+      groups: groups.length,
+      sessions: sessions.length,
+      runs: runs.length,
+      days: days.length,
+      firstDay: days[0] || null,
+      lastDay: days.length ? days[days.length - 1] : null,
+      binned: (await trash(db)).length,
+      importedFrom: await getSetting(db, 'imported_from'),
+      exportedAt: await getSetting(db, 'exported_at'),
+    };
+  }
+
+  /* Days since the last export, or null if there has never been one. Export
+     is a deliberate act - this is the nudge, not a scheduler. */
+  function daysSinceExport(summaryRow, today) {
+    if (!summaryRow || !summaryRow.exportedAt) return null;
+    const then = Date.parse(summaryRow.exportedAt);
+    if (Number.isNaN(then)) return null;
+    const now = today === undefined ? Date.now() : today;
+    return Math.max(0, Math.floor((now - then) / 86400000));
   }
 
   Object.assign(X, {
@@ -414,7 +459,7 @@
     closeGroup, reopenGroup,
     lastSettings, startSession, addRun, finishSession, groupSessions, sessionRuns,
     binRecord, restoreRecord, trash, purge, pruneEmpty,
-    loadGroup, loadAll, dump, load,
+    loadGroup, loadAll, dump, load, summary, daysSinceExport,
     KINDS,
   });
 })(typeof module === 'object' ? module.exports : (self.LCWO.store = {}),
