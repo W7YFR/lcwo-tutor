@@ -366,6 +366,82 @@ exports.run = function (check) {
   check('and the restore is classified afterwards, once there is a window',
         /box !== \(saved\.troubleChars/.test(POPUP_JS));
 
+  /* ---------- against real settings markup ---------- */
+  //
+  // The shim above is hand-built and agrees with itself. This runs the same
+  // functions over parsed HTML, where the one structural fact that matters
+  // is true: the </form> closes before the character boxes, so they are
+  // owned by nothing and a plain submit would post none of them.
+  {
+    const {documentFrom} = require('./dom.js');
+    const load = html => {
+      global.document = documentFrom(html);
+      global.Event = class { constructor(type, opts) { this.type = type;
+                                                       Object.assign(this, opts); } };
+      return global.document;
+    };
+
+    const settings = (name, real) => {
+      const doc = load(real || require('fs').readFileSync(
+        __dirname + '/fixtures/cwsettings.html', 'utf8'));
+      const boxes = doc.querySelectorAll('input[type=checkbox][name^="char"]');
+      const submit = doc.querySelector('input[type=submit]');
+      return {doc, boxes, submit, name};
+    };
+
+    let {doc, boxes, submit} = settings('fixture');
+    check('the boxes are found among the other inputs', boxes.length === 10,
+          String(boxes.length));
+    check('the button inputs are not swept up',
+          !boxes.some(b => b.getAttribute('type') === 'button'));
+    check('and neither is the unrelated vvv checkbox',
+          !boxes.some(b => b.name === 'vvv'));
+    check('none of them belongs to the form, exactly as on the live page',
+          boxes.every(b => b.form === null) && submit.form !== null);
+
+    let r = applyInPage(['U', 'R', '"'], true);
+    const on = () => doc.querySelectorAll('input[type=checkbox][name^="char"]')
+      .filter(b => b.checked).map(b => b.name.slice(4)).sort().join(',');
+    check('applying sets exactly what was asked for', on() === 'U,R,quot'
+          .split(',').sort().join(','), on());
+    check('it reports what it changed', r.ticked === 2 && r.cleared === 2,
+          JSON.stringify(r));
+    check('a change event fires on each box it touched',
+          doc.querySelectorAll('input[type=checkbox][name^="char"]')
+            .filter(b => b.events && b.events.length).length === 4);
+
+    const sub = submitInPage();
+    check('submitting adopts every orphaned box', sub.adopted === 10, JSON.stringify(sub));
+    check('and they belong to the form afterwards',
+          doc.querySelectorAll('input[type=checkbox][name^="char"]')
+            .every(b => b.form === submit.form));
+    check('the form got an id to be adopted by', !!submit.form.id);
+    check('the button was actually pressed', submit.clicked === 1);
+    check('adopting again finds nothing left to adopt', submitInPage().adopted === 0);
+
+    /* the real page, when it is here: 141 boxes with LCWO's own names */
+    let real = null;
+    try { real = require('fs').readFileSync(
+      __dirname + '/../../lcwo-html/settings-live.html', 'utf8'); } catch (e) { /* fine */ }
+    if (real) {
+      ({doc, boxes, submit} = settings('live', real));
+      check('live: every character box is found', boxes.length === 141,
+            String(boxes.length));
+      check('live: none of them belongs to the form either',
+            boxes.every(b => b.form === null));
+      const was = boxes.filter(b => b.checked).map(b => b.name.slice(4));
+      check('live: the page had a character set on it', was.length > 0);
+      // what is already ticked has to survive a read and a re-apply, or the
+      // extension would quietly drop characters it does not recognise
+      const back = readInPage();
+      check('live: reading the page returns them all',
+            back.chars.length === was.length);
+      check('live: and feeding that straight back matches everything',
+            applyInPage(parseChars(back.chars.join(',')), true).missing.length === 0);
+      check('live: submitting adopts all of them', submitInPage().adopted === 141);
+    }
+  }
+
   /* ---------- wrong page ---------- */
   page([], []);
   check('a page with no character boxes says so', !!applyInPage(['L'], true).error);
