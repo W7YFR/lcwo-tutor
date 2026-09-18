@@ -385,6 +385,40 @@ built from the live database (identical, bar Python spelling whole speeds as
 tell), and a pass in `test_report.py` that runs the whole fixture suite again
 with a JS-built payload handed in through `LCWO_DATA`.
 
+### Filling the box beats applying behind your back
+
+Changing the window refills the box immediately. The first version only
+refilled on a button press, which reads as broken: a control labeled "your
+trouble letters" with a day window beside it has made a promise, and leaving
+the letters stale while you hunt for the button that commits the change is not
+keeping it.
+
+Once the window refills on its own, the button had one job left — undoing a
+hand edit — which is not worth a control in a 320px popup, so it went. What
+replaced it runs the other way: typing into the box blanks the window. The
+pair is a single claim, "these letters are your trouble list over this
+window", and an edit makes half of it false. A window still reading "last 7
+days" over a list you typed yourself is the report equivalent of a stale
+filter chip.
+
+Which is why there is exactly one way to write to that box. Typing announces
+itself through an `input` event, but a programmatic write does not fire one —
+so **Read page**, which fills the box with LCWO's current selection, blanked
+nothing and left the window lying. Every write now goes through `setChars`,
+which takes "is this the trouble list?" as an argument. A rule that has to be
+remembered at each call site is one that gets forgotten at the next.
+
+### Why it fills rather than applies
+
+
+The popup could take your trouble letters straight to the settings page in one
+click, and the first sketch did. It is worse. Thirteen checkboxes getting
+ticked on your behalf, chosen by a threshold you cannot see, is the kind of
+thing you stop trusting the first time it picks something surprising — and
+then you go back to the CLI to check, which is the round trip the port was
+meant to remove. Filling the box costs one click and makes the decision
+reviewable before it is applied.
+
 ### The export is the contract between the two programs
 
 `lcwo.py export` writes the record shapes the browser store keeps, not the

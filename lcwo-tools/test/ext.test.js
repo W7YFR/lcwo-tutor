@@ -263,32 +263,108 @@ exports.run = function (check) {
         POPUP_HTML.indexOf('page.js') > -1
         && POPUP_HTML.indexOf('page.js') < POPUP_HTML.indexOf('popup.js'));
 
-  /* ---------- the data page ---------- */
-  const DATA_HTML = require('fs').readFileSync(__dirname + '/../src/ext/data.html', 'utf8');
-  check('the popup can reach the data page',
-        /<a href="data\.html"/.test(POPUP_HTML));
-  check('and the manifest offers it as the options page',
+  /* ---------- the extension's own pages ---------- */
+  //
+  // Four pages now load the shared modules by hand, in dependency order,
+  // because there is no bundler: each module reads what it needs off
+  // self.LCWO, so a page that lists them in the wrong order throws on load
+  // and only in a browser. That is what these check.
+  const read = f => require('fs').readFileSync(__dirname + '/../src/ext/' + f, 'utf8');
+  const PAGES = {'popup.html': POPUP_HTML, 'data.html': read('data.html'),
+                 'report.html': read('report.html'), 'practice.html': read('practice.html')};
+
+  const NEEDS = [['../core/counter.js', '../core/grade.js'],
+                 ['../core/grade.js', '../core/rollup.js'],
+                 ['../core/rng.js', '../core/practice.js'],
+                 ['../core/rollup.js', '../data/analysis.js'],
+                 ['../core/practice.js', '../data/analysis.js'],
+                 ['../data/store.js', '../data/analysis.js'],
+                 ['../data/schema.js', '../data/store.js'],
+                 ['../core/clock.js', '../data/store.js'],
+                 ['../core/assign.js', '../data/store.js'],
+                 ['../data/schema.js', '../data/idb.js'],
+                 ['../core/modes.js', '../report/payload.js'],
+                 ['../core/rollup.js', '../report/payload.js']];
+
+  for (const [name, html] of Object.entries(PAGES)) {
+    const scripts = Array.from(html.matchAll(/<script src="([^"]+)"/g)).map(m => m[1]);
+    check(name + ': no inline script or handlers',
+          !/<script(?![^>]*\ssrc=)/i.test(html) && !/<[^>]+\son[a-z]+=/i.test(html));
+    const missing = scripts.filter(
+      f => !require('fs').existsSync(__dirname + '/../src/ext/' + f));
+    check(name + ': every script it loads exists', !missing.length, missing.join(', '));
+    if (scripts.some(f => f.startsWith('../'))) {
+      check(name + ': the namespace prelude comes first', scripts[0] === '../ns.js');
+    }
+    const at = f => scripts.indexOf(f);
+    const wrong = NEEDS.filter(([dep, mod]) => at(mod) > -1 && (at(dep) === -1 || at(dep) > at(mod)));
+    check(name + ': every module loads after what it reads',
+          !wrong.length, wrong.map(w => w[1] + ' before ' + w[0]).join(', '));
+  }
+
+  /* ---------- the popup reaches the rest ---------- */
+  for (const page of ['report.html', 'practice.html', 'data.html']) {
+    check('the popup links to ' + page,
+          new RegExp('<a href="' + page.replace('.', '\\.') + '"').test(POPUP_HTML));
+  }
+  check('the manifest offers the data page as the options page',
         MANIFEST.options_page === 'src/ext/data.html');
-  check('the data page has no inline handlers either',
-        !/<[^>]+\son[a-z]+=/i.test(DATA_HTML) && !/<script(?![^>]*\ssrc=)/i.test(DATA_HTML));
-  // every module the page pulls in, in dependency order, or it throws on load
-  const SCRIPTS = Array.from(DATA_HTML.matchAll(/<script src="([^"]+)"/g)).map(m => m[1]);
-  check('the namespace prelude is loaded first', SCRIPTS[0] === '../ns.js');
-  check('and data.js last', SCRIPTS[SCRIPTS.length - 1] === 'data.js');
-  const missingScripts = SCRIPTS.filter(
-    f => !require('fs').existsSync(__dirname + '/../src/ext/' + f));
-  check('every script the data page loads exists', !missingScripts.length,
-        missingScripts.join(', '));
-  // store.js reads clock/assign/schema off the namespace, so they have to be
-  // in the page before it
-  const before = (a, b) => SCRIPTS.indexOf(a) > -1 && SCRIPTS.indexOf(a) < SCRIPTS.indexOf(b);
-  check('dependencies load before the modules that read them',
-        before('../core/counter.js', '../core/grade.js')
-        && before('../core/grade.js', '../core/rollup.js')
-        && before('../data/schema.js', '../data/store.js')
-        && before('../core/clock.js', '../data/store.js')
-        && before('../core/assign.js', '../data/store.js')
-        && before('../data/schema.js', '../data/idb.js'));
+
+  /* ---------- trouble letters, straight into the box ---------- */
+  //
+  // The whole point of the port: the list used to come off the clipboard.
+  check('the popup has a window to pick',
+        /id="window"/.test(POPUP_HTML) && /<select id="window">/.test(POPUP_HTML));
+  check('and it reads them out of the database itself',
+        /analysis\.troubleReport/.test(POPUP_JS));
+  check('it fills the box rather than applying behind your back',
+        /asList\(r\.top\)/.test(POPUP_JS) && /setChars\(list, true\)/.test(POPUP_JS)
+        && !/sendMessage\([\s\S]{0,80}troubleReport/.test(POPUP_JS));
+  check('the popup loads the analysis module it needs',
+        /data\/analysis\.js/.test(POPUP_HTML));
+  // a popup that throws on an empty database is worse than one that says so
+  check('no data leaves the control disabled rather than broken',
+        /sel\.disabled = true/.test(POPUP_JS));
+  // changing the window has to change the letters, or you go hunting for a
+  // button that commits it - and there is no longer one to find
+  check('changing the window refills the box',
+        /sel\.addEventListener\('change',[\s\S]{0,200}?refill\(\)/.test(POPUP_JS));
+  check('the window is the only control left',
+        !/id="use"/.test(POPUP_HTML) && !/\$\('use'\)/.test(POPUP_JS));
+  check('an empty box on opening gets filled', /if \(!box\) await refill\(\)/.test(POPUP_JS));
+  // the restore and the fill used to race; the fill has to know whether the
+  // box already held something
+  check('the saved list is restored before the box is judged empty',
+        POPUP_JS.indexOf("if (saved.chars)") < POPUP_JS.indexOf('await setUpTrouble(saved)'));
+  check('the threshold comes from the rollup, not a copy of it',
+        /LCWO\.rollup\.TROUBLE_THRESHOLD/.test(POPUP_JS));
+
+  // typing over the list means the window no longer describes what is there
+  check('typing blanks the window',
+        /addEventListener\('input', \(\) => showCustom\(true\)\)/.test(POPUP_JS));
+  check('the blank option carries no label',
+        /opt\.textContent = '';/.test(POPUP_JS));
+  check('and picking a window again takes it away',
+        /showCustom\(false\)/.test(POPUP_JS));
+  check('a restored list that is not the trouble list opens blank too',
+        /box !== \(saved\.troubleChars/.test(POPUP_JS));
+  check('so the last filled list is remembered to compare against',
+        /troubleChars: value/.test(POPUP_JS));
+
+  // Reading the page fills the box with LCWO's current selection, which is
+  // not your trouble list either - and a programmatic write fires no input
+  // event, so it has to say so itself.
+  check('reading the page blanks the window too',
+        /setChars\(r\.chars\.join/.test(POPUP_JS));
+  check('and filling from trouble does not',
+        /setChars\(list, true\)/.test(POPUP_JS));
+  // one way in, so the next thing that writes to the box cannot forget
+  const writes = POPUP_JS.split('\n').filter(
+    l => /\$\('chars'\)\.value =/.test(l));
+  check('the box is only written through setChars, bar the restore on open',
+        writes.length === 2, writes.map(l => l.trim()).join(' | '));
+  check('and the restore is classified afterwards, once there is a window',
+        /box !== \(saved\.troubleChars/.test(POPUP_JS));
 
   /* ---------- wrong page ---------- */
   page([], []);

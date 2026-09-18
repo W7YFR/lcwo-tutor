@@ -132,6 +132,11 @@ tab you already have open (or opens one) and lands you on Code Groups ready to
 go. Either way, changing your practice set
 is a paste and a click. See [its README](lcwo-tools/README.md) to install it.
 
+Your trouble letters now come out of the extension too, so the round trip
+through the clipboard is gone: pick a window in the popup, hit **Use**, hit
+**Apply**, and the characters you have been missing are the ones LCWO sends
+you next. Sending practice has its own page alongside it.
+
 The report also runs in there now — same filters and tables, reading the
 browser's copy of your practice instead of a file written earlier. It is the
 same code: `lcwo-tools/src/report/app.js` is what `make report` inlines.

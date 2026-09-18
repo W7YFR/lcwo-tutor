@@ -89,10 +89,48 @@ The port is in steps, each one usable on its own:
 3. **the report** - as an extension page reading IndexedDB, live instead of a
    generated file. Done; the same app.js the CLI inlines.
 4. **trouble and practice** in the popup, wired straight into the applier
-   below, so the list never has to be copied anywhere.
+   below, so the list never has to be copied anywhere. Done.
 5. **capture** - buttons on `/groups` that record a run, and picking up LCWO's
    own grading when you submit.
 6. **export**, and a note in the popup of how long since the last one.
+
+## Your trouble letters, without the clipboard
+
+This is the loop closing. The list used to come out of `make trouble PB=1`,
+onto the clipboard, into the popup. Now the popup reads it out of IndexedDB:
+
+> **Your trouble letters** [ last 7 days ▾ ]
+
+Change the window and the box fills with the worse half of what you have been
+missing over it — the same characters `make trouble` prints, from the same
+numbers. Then **Apply** as usual.
+
+Type over the box, or press **Read page**, and the window goes blank: what is
+in there is no longer your trouble list, and a window still reading "last 7
+days" would be claiming otherwise. Pick a window again and it comes back.
+
+It fills the box rather than applying straight off. That saves nothing in
+clicks, but you get to see which characters you are about to set on yourself,
+and silently ticking thirteen boxes you never read is not an improvement on
+pasting them.
+
+The window counts **days you practiced**, not calendar days, so skipping a
+Tuesday reaches back past it. Only windows shorter than your history are
+offered — a 14-day window over 10 days of practice is "all time" wearing a
+hat. And the threshold applies to the total across the window, not to each
+day inside it: one miss a day for two days is a character missed twice.
+
+## Sending practice
+
+**Sending practice** opens `make practice` as a page: groups drawn from the
+characters you miss, weighted so the worst come round most, each character
+getting a run of its own first. Below that are the pairs you mix up — H/S and
+S/H are one drill, and their counts add — with groups that always hold both,
+because the contrast is the thing being practiced.
+
+**New set** redraws, **Copy** takes the groups, and typing into *Or just
+these* ignores the statistics entirely for when you already know what you want
+to drill.
 
 ## The report
 
@@ -140,7 +178,7 @@ that will not load.
 |---|---|
 | `src/core/` | grading, rollups, practice, timestamps. Pure functions, no storage and no DOM |
 | `src/report/` | `app.js` and `report.css`, shared with the CLI, plus `payload.js` which builds what app.js eats |
-| `src/data/` | `schema.js` the record shapes, `store.js` every query as logic over plain records, `idb.js` the IndexedDB plumbing |
+| `src/data/` | `schema.js` the record shapes, `store.js` every query as logic over plain records, `idb.js` the IndexedDB plumbing, `analysis.js` the questions the pages ask |
 | `src/ext/` | the extension itself: `page.js`, `background.js`, `popup.js`, `popup.html` |
 | `test/` | the checks, and an in-memory backend to run them against |
 | `build.js` | run the checks, then zip for sharing |
@@ -172,6 +210,7 @@ Each module reads its dependencies through `require` under node and off
 | `src/ext/popup.html` | markup and styles |
 | `src/ext/data.html` `data.js` | import, export, and what is in the database |
 | `src/ext/report.html` `report.js` | the report page: build the payload, then hand it to app.js |
+| `src/ext/practice.html` `practice.js` | sending practice and confusion-pair drills |
 
 The split matters. `chrome.tabs.update` on the active tab dismisses the popup,
 and a dismissed popup takes its JavaScript with it — driven from there, the
