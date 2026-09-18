@@ -132,6 +132,14 @@ tab you already have open (or opens one) and lands you on Code Groups ready to
 go. Either way, changing your practice set
 is a paste and a click. See [its README](lcwo-tools/README.md) to install it.
 
+The extension is also where this is heading. It is being grown into the whole
+tool — recording runs straight off the LCWO page into IndexedDB, with the
+report and the trouble lists built in the popup — so that using it needs
+nothing but a browser rather than Python and a terminal. The grading core, the
+rollups and the data layer are ported and carry the same checks as the CLI;
+`lcwo-tools/README.md` has the plan and what is done so far. The CLI stays as
+the reference implementation, and as the way in and out of a plain file.
+
 ## Sending practice
 
 The copy side tells you which characters you are missing; `make practice` turns
@@ -192,6 +200,7 @@ make practice SEED=7       the same set again
 | `make key` | grade a session you left unfinished |
 | `make speed` | show or set a group's wpm — `G=2 CHAR=25 EFF=6` |
 | `make test` | run the Python and browser test suites |
+| `make build` | run the checks, then zip the extension for sharing |
 
 All of it works without `make` too: `python3 lcwo.py <command>`.
 

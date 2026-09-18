@@ -13,10 +13,10 @@
     "https://www.lcwo.net/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/ext/background.js"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/ext/popup.html",
     "default_title": "lcwo-tools"
   },
   "icons": {

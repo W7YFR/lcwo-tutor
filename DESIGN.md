@@ -307,6 +307,61 @@ WHERE s.char_wpm >= 20 ORDER BY s.started_at;
 Override paths with `LCWO_HOME`, `LCWO_DB`, or `LCWO_REPORTS`.
 
 
+## Moving into the browser
+
+The CLI is being ported into the extension so that using this needs nothing
+but a browser: no Python, no clone, no `make`. That is the whole reason - a CLI
+is not a neutral component when you want to hand the tool to somebody else in
+your cohort, it is the thing that makes it unshareable.
+
+The port lives in `lcwo-tools/src/`, in steps, each usable on its own. Step one
+- the grading core, the rollups and the data layer - is in and carries the same
+checks this file's selftest runs.
+
+**Grading stays derived, never stored.** A run records only what you typed; the
+session records the key. Every number on a report is computed at read time, so
+fixing a grading bug re-grades your whole history rather than leaving old
+sessions wrong for ever. This is why the core is pure functions over arrays: the
+same code runs over SQLite rows, IndexedDB records or a test fixture.
+
+**The store does not know what IndexedDB is.** It is written against a
+five-method backend (`all` / `get` / `put` / `del` / `clear`), so every query,
+every rollup and the whole soft-delete model run under node against an
+in-memory backend. Only `idb.js` needs a browser, and it holds no decisions.
+Without that split none of the data layer would be testable, and "the build
+fails if the tests fail" would be a guarantee about almost nothing.
+
+**Deleting is still soft, and hiding is still by containment.** A run is hidden
+when its own, its session's, or its group's `deleted_at` is set - the
+`live_groups` / `live_sessions` / `live_runs` views moved to read time. So
+binning a group is one field write rather than a cascade, and needs no
+transaction. `purge` is the one place that has to walk the tree, and it walks
+it *downwards*: SQLite gave the CLI `ON DELETE CASCADE` for free, and the first
+port of `purge` deleted a binned group and its sessions while orphaning the
+runs underneath. A test caught it; the order is now parents first, then sweep
+what they orphaned, which also makes an interrupted purge safe to repeat.
+
+**Timestamps are local, with an offset.** Every day-windowed number - "the last
+two days" - comes from slicing the date off the front of a timestamp.
+`Date.toISOString()` is UTC, which would file a 9pm session under tomorrow and
+quietly shift the trouble list. `clock.nowIso` writes what the Python writes,
+so imported and captured records sort together.
+
+**Practice sets are seedable.** `Math.random` cannot be, and a drill you cannot
+reproduce is a drill you cannot test. The JS generator will not produce the
+same groups as the Python one for a given seed - different algorithms - and
+does not need to: the checks are on the properties that matter (size, lengths,
+every character appearing, weighting favoring the worse ones), not on exact
+output.
+
+### Deliberately not built yet
+
+- **No automatic export.** Export is a deliberate act, and the popup counts the
+  days since the last one rather than running one on a schedule.
+- **No paste fallback.** Capture reads the page instead. If LCWO changes its
+  markup the scraper will need updating, which is a known and cheap cost; a
+  second input path built against a failure that has not happened is not.
+
 ## Extending
 
 - **New per-operator data** (goals, target speeds, exam dates) — hangs off
