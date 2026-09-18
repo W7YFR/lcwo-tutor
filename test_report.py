@@ -226,14 +226,14 @@ check('the split partitions every run with a speed',
 check('the split is one entry per distinct pair',
       split.length === new Set(graded.map(r => `${+S[r.sid].charWpm}/${+S[r.sid].effWpm}`)).size,
       split.map(s => s.k).join(' '));
-check('the split is most-practised first',
+check('the split is most-practiced first',
       split.every((s, i) => !i || split[i - 1].runs.length >= s.runs.length));
 const top = document.getElementById('app').innerHTML;
 check('the wpm tile leads the headline',
       top.indexOf('wpm') < top.indexOf('chars copied'));
 check('the scope line carries the speed too',
       /wpm/.test(document.getElementById('scopeline').innerHTML));
-check('a varying speed is labelled as an average',
+check('a varying speed is labeled as an average',
       top.includes('average of ' + split.length + ' speeds')
       && document.getElementById('scopeline').innerHTML.includes('avg '));
 check('the breakdown appears when speeds differ', top.includes('Speeds in scope'));
@@ -351,7 +351,7 @@ const withT = DATA.runs.some(r => r.cells.some(c => c[2].includes('t')));
 const h0 = document.getElementById('app').innerHTML;
 check('Transposed column shown iff transpositions exist',
       h0.includes('Transposed') === withT, 'hasTransposition=' + withT);
-check('Miss rate column labelled', h0.includes('Miss rate'));
+check('Miss rate column labeled', h0.includes('Miss rate'));
 
 // ---- sparkline: hover targets, not a wall of text ----
 check('one hover target per run',
@@ -360,7 +360,7 @@ check('at most two axis labels',
       (h0.match(/<text[^>]*>/g) || []).length <= 2);
 check('caption present', h0.includes('id="sparkcap"'));
 
-// ---- bars are graded red->green, not one flat colour ----
+// ---- bars are graded red->green, not one flat color ----
 const hues = [...h0.matchAll(/hsl\((\d+) 62%/g)].map(m => +m[1]);
 check('bars span a range of hues', new Set(hues).size > 2, 'distinct=' + new Set(hues).size);
 check('a poor score is red-ish', Math.min(...hues) < 45, 'min=' + Math.min(...hues));

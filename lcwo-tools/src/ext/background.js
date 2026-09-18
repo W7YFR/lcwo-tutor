@@ -91,9 +91,9 @@ async function applyFlow({tabId, windowId, url, chars, replace}) {
           + `${plan.mode === 'newtab' ? 'now on' : 'and back to'} ${plan.from}.`};
 }
 
-async function badge(text, colour) {
+async function badge(text, color) {
   await chrome.action.setBadgeText({text});
-  if (colour) await chrome.action.setBadgeBackgroundColor({color: colour});
+  if (color) await chrome.action.setBadgeBackgroundColor({color: color});
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, respond) => {

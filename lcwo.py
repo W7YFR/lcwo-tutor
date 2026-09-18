@@ -546,12 +546,12 @@ def fmt_wpm(v) -> str:
 # invocations and `record` does not have to ask when there is only one.
 
 
-def normalise_call(s) -> str:
+def normalize_call(s) -> str:
     return re.sub(r"\s+", "", s or "").upper()
 
 
 def create_operator(con, name, callsign, created_at=None, notes=None) -> int:
-    name, callsign = (name or "").strip(), normalise_call(callsign)
+    name, callsign = (name or "").strip(), normalize_call(callsign)
     if not name or not callsign:
         raise ValueError("an operator needs both a name and a call sign")
     cur = con.execute(
@@ -583,7 +583,7 @@ def find_operator(con, token) -> sqlite3.Row | None:
             return row
     return con.execute(
         "SELECT * FROM operators WHERE callsign=? OR lower(name)=lower(?)",
-        (normalise_call(token), token)).fetchone()
+        (normalize_call(token), token)).fetchone()
 
 
 def op_label(op) -> str:
@@ -933,7 +933,7 @@ def practice_set(counts, n=24, rng=None, min_len=2, max_len=3) -> list[str]:
     It opens with a run of one character on its own - its rhythm with nothing
     to compare it to - worst first. The rest are drawn weighted by how often
     you missed them, so the worst come round most, and mixed together so you
-    practise the transitions between them too.
+    practice the transitions between them too.
 
     At most half the set is solo runs: a ten-character trouble list would
     otherwise spend the whole drill on single characters. Whatever gets crowded
@@ -1290,7 +1290,7 @@ const trouble = st => [...st.miss.entries()]
 
 /* ---------- scopes ---------- */
 const days = [...new Set(graded.map(r => r.day))].sort();
-/* Windows count days you actually practised, not calendar days: skip a
+/* Windows count days you actually practiced, not calendar days: skip a
    Tuesday and "the last two days" still means your last two sessions' days,
    which is the question people actually ask of a practice log. */
 const WINDOWS = [2, 3, 7, 14, 30].filter(n => n < days.length);
@@ -1377,7 +1377,7 @@ function meanSpeed(runs){
           known: known.length, missing: runs.length - known.length};
 }
 
-/* one entry per distinct char/eff pair, most practised first */
+/* one entry per distinct char/eff pair, most practiced first */
 function speedSplit(runs){
   const out = new Map();
   for (const r of runs.filter(hasSpeed)){
@@ -1938,7 +1938,7 @@ def magenta(t):
 
 
 def pad(text, width, plain) -> str:
-    """Left-justify coloured text. `:<n` cannot: it counts escape codes."""
+    """Left-justify colored text. `:<n` cannot: it counts escape codes."""
     return text + " " * max(0, width - len(plain))
 
 
@@ -2044,20 +2044,20 @@ def read_paste(prompt: str) -> str:
 # --------------------------------------------------------------------------
 
 
-CELL_COLOUR = {"correct": lambda t: t, "missed": red, "wrong": red,
+CELL_COLOR = {"correct": lambda t: t, "missed": red, "wrong": red,
                "transposed": magenta, "extra": yellow}
 
 
-def colour_recv(gr: GroupCell) -> tuple[str, str]:
-    """(coloured, plain) for what you copied, marking only what went wrong.
+def color_recv(gr: GroupCell) -> tuple[str, str]:
+    """(colored, plain) for what you copied, marking only what went wrong.
 
-    Colouring the whole group hides the thing you want to see - which letter
+    Coloring the whole group hides the thing you want to see - which letter
     in QUT was the one you dropped. A position you did not reach at all shows
     as `_`, so a short group looks short.
     """
     if not gr.cells:
         return red("--"), "--"
-    return ("".join(CELL_COLOUR[cell.kind](cell.recv or "_") for cell in gr.cells),
+    return ("".join(CELL_COLOR[cell.kind](cell.recv or "_") for cell in gr.cells),
             "".join(cell.recv or "_" for cell in gr.cells))
 
 
@@ -2083,7 +2083,7 @@ def print_run_summary(g: RunGrade, label: str) -> None:
                 detail.append(f"extra {cell.recv}")
         note = "transposed" if gr.transposed else ", ".join(detail)
         sent = gr.sent or "--"
-        got, got_plain = colour_recv(gr)
+        got, got_plain = color_recv(gr)
         print(f"      #{gr.idx + 1:>2}  sent {pad(bold(sent), 6, sent)} "
               f"got {pad(got, 6, got_plain)}  {dim(note)}")
     if len(bad) > 12:
@@ -2180,7 +2180,7 @@ def add_operator(con, adopt=False):
               " than one operator"))
     name = ask_text("Name")
     while True:
-        call = normalise_call(ask_text("Call sign"))
+        call = normalize_call(ask_text("Call sign"))
         if not call:
             print(dim("  (required)"))
             continue
@@ -2503,7 +2503,7 @@ def cmd_practice(args) -> int:
     pairs = []
     if args.chars:
         # uppercased, spaces dropped, first occurrence wins - all equally weighted
-        picked = list(dict.fromkeys(normalise_call(args.chars)))
+        picked = list(dict.fromkeys(normalize_call(args.chars)))
         counts = Counter(dict.fromkeys(picked, 1))
         scope = "your list"
         sent = Counter()
@@ -2576,17 +2576,17 @@ def cmd_user(args) -> int:
     if args.add:
         name = args.name or (ask_text("Name") if _TTY else "")
         call = args.call or (ask_text("Call sign") if _TTY else "")
-        if not (name or "").strip() or not normalise_call(call):
+        if not (name or "").strip() or not normalize_call(call):
             raise SystemExit("an operator needs both --name and --call")
         if find_operator(con, call) is not None:
-            raise SystemExit(f"{normalise_call(call)} is already in the database")
+            raise SystemExit(f"{normalize_call(call)} is already in the database")
         first = not list_operators(con)
         oid = create_operator(con, name, call)
         set_current_operator(con, oid)
         if first:
             n = adopt_unassigned(con, oid)
             if n:
-                print(dim(f"  {n} existing group(s) now belong to {normalise_call(call)}"))
+                print(dim(f"  {n} existing group(s) now belong to {normalize_call(call)}"))
         print(green(f"  ✓ added {op_label(get_operator(con, oid))}, now recording as them"))
     elif args.use:
         op = find_operator(con, args.use)
@@ -2614,7 +2614,7 @@ def cmd_user(args) -> int:
         if op is None:
             raise SystemExit("nobody is current — add one with --add")
         name = (args.name or op["name"]).strip()
-        call = normalise_call(args.call) or op["callsign"]
+        call = normalize_call(args.call) or op["callsign"]
         clash = find_operator(con, call)
         if clash is not None and clash["id"] != op["id"]:
             raise SystemExit(f"{call} is already in the database")
@@ -3154,7 +3154,7 @@ def cmd_selftest(args) -> int:
         check("sessions renumbered 1..n", [x["seq"] for x in merged] == [1, 2, 3])
         check("sessions ordered by time",
               [x["started_at"] for x in merged] == sorted(x["started_at"] for x in merged))
-        check("label normalised to the assignment", get_group(con, mixed)["label"] == "MIX")
+        check("label normalized to the assignment", get_group(con, mixed)["label"] == "MIX")
         check("merge is idempotent",
               not [e for e in merge_plan(con) if e["assignment"] == "MIX"])
 
@@ -3221,14 +3221,14 @@ def cmd_selftest(args) -> int:
               and {ps[0][0], ps[1][0]} == {"A", "B"})
         check("the worst character leads", ps[0][0] == "A")
         check("group lengths stay in range", all(2 <= len(g) <= 3 for g in ps))
-        check("weighting favours the worse character",
+        check("weighting favors the worse character",
               "".join(ps).count("A") > 3 * "".join(ps).count("B"))
         check("mixed groups appear", any(len(set(g)) > 1 for g in ps))
         check("solo groups appear", sum(len(set(g)) == 1 for g in ps) > 20)
         check("a seed repeats a set",
               practice_set(Counter({"A": 9, "B": 1}), n=20, rng=random.Random(3))
               == practice_set(Counter({"A": 9, "B": 1}), n=20, rng=random.Random(3)))
-        check("nothing to practise yields nothing", practice_set(Counter()) == [])
+        check("nothing to practice yields nothing", practice_set(Counter()) == [])
         check("one character is all solos",
               all(set(g) == {"Q"} for g in practice_set(Counter({"Q": 2}), n=5)))
         small = practice_set(Counter({"A": 3, "B": 2, "C": 1}), n=3,
@@ -3244,27 +3244,27 @@ def cmd_selftest(args) -> int:
 
         # only the characters that went wrong are marked, not the whole group
         was_tty = _TTY
-        globals()["_TTY"] = True  # colour is off when piped; force it on to look
+        globals()["_TTY"] = True  # color is off when piped; force it on to look
         try:
-            veg, veg_plain = colour_recv(grade_group(0, "VEG", "VTG"))
-            qdm = colour_recv(grade_group(0, "QDM", "QUT"))[0]
-            short = colour_recv(grade_group(0, "ABCDE", "ABC"))[1]
-            trans = colour_recv(grade_group(0, "WM", "MW"))[0]
-            extra = colour_recv(grade_group(0, "ABC", "ABCD"))[0]
+            veg, veg_plain = color_recv(grade_group(0, "VEG", "VTG"))
+            qdm = color_recv(grade_group(0, "QDM", "QUT"))[0]
+            short = color_recv(grade_group(0, "ABCDE", "ABC"))[1]
+            trans = color_recv(grade_group(0, "WM", "MW"))[0]
+            extra = color_recv(grade_group(0, "ABC", "ABCD"))[0]
             padded, padded_want = pad(red("X"), 4, "X"), red("X") + "   "
         finally:
             globals()["_TTY"] = was_tty
-        check("correct characters stay uncoloured", veg.startswith("V\033[31m"))
+        check("correct characters stay uncolored", veg.startswith("V\033[31m"))
         check("only the wrong character is red", veg.count("\033[31m") == 1)
         check("the plain form is the copied group", veg_plain == "VTG")
         check("two wrong characters, two marks", qdm.count("\033[31m") == 2)
         check("a dropped tail shows as underscores", short == "ABC__")
         check("a transposition is not marked as wrong",
               "\033[31m" not in trans and "\033[35m" in trans)
-        check("an extra character is its own colour", "\033[33m" in extra)
+        check("an extra character is its own color", "\033[33m" in extra)
         check("padding counts characters, not escape codes", padded == padded_want)
-        check("colour is dropped when output is not a terminal",
-              _TTY or colour_recv(grade_group(0, "VEG", "VTG"))[0] == "VTG")
+        check("color is dropped when output is not a terminal",
+              _TTY or color_recv(grade_group(0, "VEG", "VTG"))[0] == "VTG")
 
         # a new assignment starts from the speed the last one finished at
         speedy = create_group(con, assignment="SPEEDY", label="SPEEDY")
@@ -3326,7 +3326,7 @@ def cmd_selftest(args) -> int:
         check("a window filters confusions",
               not confusion_counts([load_group(con, gid)], days=["1999-01-01"]))
 
-        # a window over the days actually practised, for "how did this week go"
+        # a window over the days actually practiced, for "how did this week go"
         span = create_group(con, assignment="SPAN", label="SPAN")
         for i, day in enumerate(("2026-03-01", "2026-03-02", "2026-03-05")):
             sp = start_session(con, get_group(con, span), mode="letters",
@@ -3354,7 +3354,7 @@ def cmd_selftest(args) -> int:
 
         # operators: every group belongs to one, and listings follow
         me = create_operator(con, "Test Op", " w0test ")
-        check("call sign normalised", get_operator(con, me)["callsign"] == "W0TEST")
+        check("call sign normalized", get_operator(con, me)["callsign"] == "W0TEST")
         check("found by call sign", find_operator(con, "w0test")["id"] == me)
         check("found by id", find_operator(con, str(me))["id"] == me)
         check("found by name", find_operator(con, "test op")["id"] == me)
@@ -3486,7 +3486,7 @@ def main(argv=None) -> int:
     t.add_argument("-g", "--group", type=int)
     t.add_argument("-n", "--threshold", type=int, default=TROUBLE_THRESHOLD)
     t.add_argument("-d", "--days", type=int, metavar="N",
-                   help="only the last N days you practised")
+                   help="only the last N days you practiced")
     t.add_argument("-l", "--list", action="store_true",
                    help="print only the worst half, comma separated")
     t.add_argument("-p", "--copy", action="store_true",
@@ -3501,7 +3501,7 @@ def main(argv=None) -> int:
     pr.add_argument("-g", "--group", type=int)
     pr.add_argument("-n", "--threshold", type=int, default=TROUBLE_THRESHOLD)
     pr.add_argument("-d", "--days", type=int, metavar="N",
-                    help="only the last N days you practised")
+                    help="only the last N days you practiced")
     pr.add_argument("-c", "--count", type=int, default=24, help="how many groups")
     pr.add_argument("--chars", help="use these characters instead of the trouble list")
     pr.add_argument("--pairs", action="store_true",

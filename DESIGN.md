@@ -53,7 +53,7 @@ exactly the characters that are quietly wrong all week.
 ## Showing speed
 
 Speed lives on the session, so every scope wider than one session can hold
-several — the tile has to summarise. It averages **across runs**, not across
+several — the tile has to summarize. It averages **across runs**, not across
 sessions: a session you ran three times represents three times the practice at
 that speed, and weighting by session would let a one-run session at an unusual
 speed drag the figure around.
@@ -65,7 +65,7 @@ from the mean rather than counted as zero, and the tile says how many were left
 out.
 
 `Speeds in scope` at the bottom is the detail: one row per distinct
-character/effective pair, most practised first, with its own accuracy. It hides
+character/effective pair, most practiced first, with its own accuracy. It hides
 itself when there is only one speed, because then the tile has already said
 everything and a one-row table is just furniture.
 
@@ -187,7 +187,7 @@ grows with data rather than with the number of groups.
    session, a session splits by run. That is the "see it across levels" view.
 3. **Confusions** — `sent → heard` pairs, usually the most actionable panel.
 4. **Accuracy per run** — sparkline over the runs in scope. Only the first and
-   last runs are labelled on the axis; per-point labels collide past a handful
+   last runs are labeled on the axis; per-point labels collide past a handful
    of runs. Hover any point and the caption above names it and its accuracy.
 5. **Runs in scope** — one row per run; click any row to expand its errors,
    with the full group-by-group grid behind a toggle. The accuracy bar runs

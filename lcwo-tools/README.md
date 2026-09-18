@@ -151,7 +151,7 @@ which is worse than no release. Development does not need a build at all -
 load this directory unpacked and reload after an edit.
 
 The page-side functions are plain, self-contained functions (`chrome.scripting`
-serialises them into the page, so they cannot close over anything) and the test
+serializes them into the page, so they cannot close over anything) and the test
 runs them against a small DOM shim built from the real markup — including the
 awkward bits: `charquot` for `"`, Cyrillic that must not collide with Latin,
 the unrelated inputs sitting among the checkboxes, and the character boxes

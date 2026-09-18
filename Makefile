@@ -116,7 +116,7 @@ help:
 	@echo
 	@echo "  variables: U= operator  G= group  S= session  R= run"
 	@echo "             D= last N practice days   N= trouble threshold"
-	@echo "             C= how many groups   CHARS= practise these instead"
+	@echo "             C= how many groups   CHARS= practice these instead"
 	@echo "             LIST=1 just the letters   PB=1 copy them to the clipboard"
 	@echo "             CHAR=/EFF= wpm   Y=1 skip prompt   APPLY=1 write merge"
 	@echo "             EVERYONE=1 every operator at once"
