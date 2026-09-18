@@ -354,6 +354,37 @@ does not need to: the checks are on the properties that matter (size, lengths,
 every character appearing, weighting favoring the worse ones), not on exact
 output.
 
+### The report has two hosts and one implementation
+
+The report was always browser code that happened to live inside Python string
+constants — 600-odd lines of it. Porting meant either writing it twice or
+getting it out of the strings, and two copies of a filter model drift within a
+week. So `app.js` and `report.css` are now plain files: `lcwo.py report` reads
+them off disk and inlines them into a self-contained file, and the extension's
+report page loads them directly. `lcwo.py` gave up 700 lines and its
+single-file property; what it bought is that there is nothing to keep in sync.
+
+The one thing the two hosts genuinely differ on is how the payload arrives.
+The CLI embeds it in a `<script id="data">` tag, because the file has to work
+when opened from disk with no server. The extension builds it from IndexedDB,
+which is async, so a script tag cannot wait for it — the page sets
+`LCWO_DATA` and then appends app.js. app.js takes whichever it finds:
+
+```js
+const DATA = typeof LCWO_DATA !== 'undefined' && LCWO_DATA
+  ? LCWO_DATA : JSON.parse(document.getElementById('data').textContent);
+```
+
+That leaves two things that could drift, and both are checked. The **markup**
+is a contract — every element app.js looks up by id has to exist in the CLI's
+shell and in the extension's page, and a test reads the shell straight out of
+`lcwo.py` to compare. The **payload shape** is the other, and it is checked
+three ways: a field-by-field test over a fixture, a diff of the two payloads
+built from the live database (identical, bar Python spelling whole speeds as
+`25.0` where JS says `25` — app.js coerces with `+`, so nothing downstream can
+tell), and a pass in `test_report.py` that runs the whole fixture suite again
+with a JS-built payload handed in through `LCWO_DATA`.
+
 ### The export is the contract between the two programs
 
 `lcwo.py export` writes the record shapes the browser store keeps, not the

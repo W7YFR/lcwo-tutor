@@ -132,6 +132,10 @@ tab you already have open (or opens one) and lands you on Code Groups ready to
 go. Either way, changing your practice set
 is a paste and a click. See [its README](lcwo-tools/README.md) to install it.
 
+The report also runs in there now — same filters and tables, reading the
+browser's copy of your practice instead of a file written earlier. It is the
+same code: `lcwo-tools/src/report/app.js` is what `make report` inlines.
+
 The extension is also where this is heading. It is being grown into the whole
 tool — recording runs straight off the LCWO page into IndexedDB, with the
 report and the trouble lists built in the popup — so that using it needs

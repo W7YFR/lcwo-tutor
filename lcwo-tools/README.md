@@ -87,12 +87,28 @@ The port is in steps, each one usable on its own:
 2. **import** - `lcwo.py export` into IndexedDB, so the rest is built against
    real practice data rather than fixtures. Done; the data page below.
 3. **the report** - as an extension page reading IndexedDB, live instead of a
-   generated file.
+   generated file. Done; the same app.js the CLI inlines.
 4. **trouble and practice** in the popup, wired straight into the applier
    below, so the list never has to be copied anywhere.
 5. **capture** - buttons on `/groups` that record a run, and picking up LCWO's
    own grading when you submit.
 6. **export**, and a note in the popup of how long since the last one.
+
+## The report
+
+**Progress report** in the popup opens the same report `make report` builds -
+same filters, same tables, same charts - except it reads IndexedDB when you
+open it rather than being a file written at some point in the past.
+
+There is only one implementation. `src/report/app.js` and `report.css` are
+plain files: the CLI inlines them into a self-contained HTML file, and the
+extension page loads them as-is. The only difference either can see is where
+the payload comes from - a `<script id="data">` tag in the CLI's file, or
+IndexedDB here - and app.js takes whichever is there.
+
+One deliberate difference in behavior: the CLI scopes a report to the current
+operator, while this loads everyone and lets the Operator filter narrow it,
+because in a page the control is right there.
 
 ## Moving your practice in and out
 
@@ -123,6 +139,7 @@ that will not load.
 | | |
 |---|---|
 | `src/core/` | grading, rollups, practice, timestamps. Pure functions, no storage and no DOM |
+| `src/report/` | `app.js` and `report.css`, shared with the CLI, plus `payload.js` which builds what app.js eats |
 | `src/data/` | `schema.js` the record shapes, `store.js` every query as logic over plain records, `idb.js` the IndexedDB plumbing |
 | `src/ext/` | the extension itself: `page.js`, `background.js`, `popup.js`, `popup.html` |
 | `test/` | the checks, and an in-memory backend to run them against |
@@ -154,6 +171,7 @@ Each module reads its dependencies through `require` under node and off
 | `src/ext/popup.js` | the popup, kept thin because it gets dismissed mid-flight |
 | `src/ext/popup.html` | markup and styles |
 | `src/ext/data.html` `data.js` | import, export, and what is in the database |
+| `src/ext/report.html` `report.js` | the report page: build the payload, then hand it to app.js |
 
 The split matters. `chrome.tabs.update` on the active tab dismisses the popup,
 and a dismissed popup takes its JavaScript with it — driven from there, the

@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LCWO progress</title>
+<link rel="stylesheet" href="../report/report.css">
+
+<!-- The same controls the CLI's report writes. app.js drives both and cannot
+     tell them apart, so the ids here are a contract - test/report.test.js
+     checks every element app.js reaches for exists in both. -->
+<div class="bar"><div class="wrap">
+  <div class="quick" id="quick"></div>
+  <div class="filters" id="filters">
+    <label>From <select id="f-from"></select></label>
+    <label>To <select id="f-to"></select></label>
+    <label id="w-op" hidden>Operator <select id="f-op"></select></label>
+    <label>Assignment <select id="f-gid"></select></label>
+    <label>Session <select id="f-sid"></select></label>
+    <label id="w-drill" hidden>Drill <select id="f-drill"></select></label>
+    <button id="clear" type="button">Clear</button>
+  </div>
+  <div class="scopeline" id="scopeline"></div>
+</div></div>
+<div class="wrap">
+  <h1 id="title">LCWO progress</h1>
+  <p class="sub" id="sub"></p>
+  <div id="app"></div>
+</div>
+
+<script src="../ns.js"></script>
+<script src="../core/counter.js"></script>
+<script src="../core/clock.js"></script>
+<script src="../core/modes.js"></script>
+<script src="../core/grade.js"></script>
+<script src="../core/assign.js"></script>
+<script src="../core/rollup.js"></script>
+<script src="../data/schema.js"></script>
+<script src="../data/store.js"></script>
+<script src="../data/idb.js"></script>
+<script src="../report/payload.js"></script>
+<script src="report.js"></script>
