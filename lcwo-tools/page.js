@@ -72,6 +72,17 @@ function planFor(urlString) {
     : {mode: 'roundtrip', back: u.href, from: u.pathname};
 }
 
+/* Which already-open LCWO tab to reuse, given the ones in this window.
+ * One already sitting on the settings page saves a navigation; otherwise any
+ * LCWO tab will do. */
+function pickLcwoTab(tabs) {
+  if (!tabs || !tabs.length) return null;
+  const onSettings = tabs.find(t => {
+    try { return new URL(t.url || '').pathname === '/cwsettings'; } catch (e) { return false; }
+  });
+  return onSettings || tabs[0];
+}
+
 /* Self-contained: clicks the page's own Submit, the way you would. The marker
  * is how the caller knows the POST has landed - the reload wipes it. */
 function submitInPage() {
@@ -113,5 +124,6 @@ function readInPage() {
 }
 
 if (typeof module !== 'undefined') {           // for the node test; inert in Chrome
-  module.exports = {parseChars, planFor, applyInPage, submitInPage, readInPage, sameChars};
+  module.exports = {parseChars, planFor, pickLcwoTab, applyInPage, submitInPage,
+                    readInPage, sameChars};
 }

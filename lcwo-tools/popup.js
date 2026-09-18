@@ -36,7 +36,8 @@ $('apply').addEventListener('click', async () => {
     // If the tab navigates, this popup closes and the reply never arrives -
     // the worker still finishes, and leaves the outcome on the badge.
     const r = await chrome.runtime.sendMessage(
-      {type: 'apply', tabId: tab.id, url: tab.url, chars, replace: $('replace').checked});
+      {type: 'apply', tabId: tab.id, windowId: tab.windowId, url: tab.url,
+       chars, replace: $('replace').checked});
     if (r) say(r.message, r.ok ? 'ok' : 'bad');
   } catch (e) {
     say(String((e && e.message) || e), 'bad');

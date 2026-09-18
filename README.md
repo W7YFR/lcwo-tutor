@@ -127,8 +127,9 @@ checkboxes out in Koch order rather than alphabetically, so doing it by hand
 means hunting for every character.
 
 From any other LCWO page — Code Groups, say — Apply goes to the settings, ticks,
-saves, and drops you back where you were; from anywhere else it opens a new tab
-and lands you on Code Groups ready to go. Either way, changing your practice set
+saves, and drops you back where you were; from anywhere else it borrows an LCWO
+tab you already have open (or opens one) and lands you on Code Groups ready to
+go. Either way, changing your practice set
 is a paste and a click. See [its README](lcwo-tools/README.md) to install it.
 
 ## Sending practice

@@ -31,12 +31,14 @@ are:
 |---|---|
 | `lcwo.net/cwsettings` | ticks, saves, leaves you on the form |
 | any other LCWO page | goes to the settings, ticks, saves, returns you to the page you were on |
-| anywhere else | opens a **new tab**, ticks, saves, and lands it on Code Groups |
+| anywhere else | uses an LCWO tab already open in that window, or opens one, then ticks, saves and lands it on Code Groups |
 
 Every route saves — you never have to click Submit yourself. The tab you were
 on is only ever navigated if it was already an LCWO page; from anywhere else
-the work happens in a tab of its own, so a page that merely *looks* like LCWO
-(`evil-lcwo.net`) is never scripted at all.
+the work happens in some other LCWO tab, so a page that merely *looks* like
+LCWO (`evil-lcwo.net`) is never scripted at all. If you already have LCWO open
+somewhere in that window it reuses that tab rather than stacking up another
+copy, preferring one already sitting on the settings page.
 
 So from **Code Groups**: paste, Apply, and you are back on Code Groups a second
 later with the new character set live.
@@ -58,12 +60,14 @@ popup, which shows the full message and clears it.
 
 ## Permissions
 
-`activeTab`, `scripting`, `storage`, and host access to `https://lcwo.net/*`.
+`activeTab`, `scripting`, `storage`, and host access to `https://lcwo.net/*`
+and `https://www.lcwo.net/*`.
 
-The host permission is what lets the round trip keep working across the
-navigations it makes (settings → save → back); `activeTab` alone is scoped to
-the page you clicked on. It is limited to LCWO over HTTPS, and the URL check is
-anchored, so a lookalike like `evil-lcwo.net` is refused rather than scripted.
+The host permissions are what let the round trip keep working across the
+navigations it makes (settings → save → back), and what let it find an LCWO tab
+already open; `activeTab` alone is scoped to the page you clicked on. They are
+limited to LCWO over HTTPS, and the URL check is anchored, so a lookalike like
+`evil-lcwo.net` is refused rather than scripted.
 `storage` is local only — it remembers your last list so the popup reopens
 where you left it. Nothing leaves your machine.
 

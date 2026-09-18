@@ -8,8 +8,8 @@
  *     node lcwo-tools/test_popup.js
  */
 
-const {parseChars, applyInPage, readInPage, planFor, submitInPage, sameChars}
-  = require('./page.js');
+const {parseChars, applyInPage, readInPage, planFor, pickLcwoTab, submitInPage,
+       sameChars} = require('./page.js');
 const POPUP_HTML = require('fs').readFileSync(__dirname + '/popup.html', 'utf8');
 
 let FAIL = 0;
@@ -144,6 +144,20 @@ check('and that new tab ends up on Code Groups',
 check('a lookalike domain never counts as LCWO',
       plan('https://evil-lcwo.net/cwsettings').mode === 'newtab');
 
+/* ---------- reusing a tab instead of piling up new ones ---------- */
+const T = (id, url) => ({id, url});
+check('an LCWO tab already on the settings page is preferred',
+      pickLcwoTab([T(1, 'https://lcwo.net/groups'),
+                   T(2, 'https://lcwo.net/cwsettings')]).id === 2);
+check('otherwise the first LCWO tab will do',
+      pickLcwoTab([T(3, 'https://lcwo.net/forum'),
+                   T(4, 'https://lcwo.net/groups')]).id === 3);
+check('no LCWO tab means there is nothing to reuse',
+      pickLcwoTab([]) === null && pickLcwoTab(null) === null
+      && pickLcwoTab(undefined) === null);
+check('a tab whose url we cannot read does not throw',
+      pickLcwoTab([T(5, undefined), T(6, 'https://lcwo.net/cwsettings')]).id === 6);
+
 /* ---------- submitting ---------- */
 (function () {
   const clicks = [];
@@ -213,10 +227,22 @@ check('no mode reports success before it has submitted',
 check('there is one submit for all three modes',
       (BG.match(/run\(target, submitInPage\)/g) || []).length === 1);
 check('only the new-tab mode creates a tab', /chrome\.tabs\.create/.test(BG));
+check('an open LCWO tab is looked for before a new one is made',
+      BG.indexOf('chrome.tabs.query') > -1
+      && BG.indexOf('chrome.tabs.query') < BG.indexOf('chrome.tabs.create'));
+check('the search is scoped to the window you were in',
+      /chrome\.tabs\.query\(\{windowId, url: LCWO_TABS\}\)/.test(BG));
+check('and the popup passes that window along',
+      /windowId: tab\.windowId/.test(POPUP_JS));
 check('the tab you were on is never scripted in new-tab mode',
       /target = \(await chrome\.tabs\.create/.test(BG));
-check('host access is scoped to LCWO over https',
-      JSON.stringify(MANIFEST.host_permissions) === '["https://lcwo.net/*"]');
+// planFor treats www.lcwo.net as LCWO, so the manifest has to let us script it
+check('host access covers both spellings of LCWO, over https only',
+      JSON.stringify(MANIFEST.host_permissions)
+      === '["https://lcwo.net/*","https://www.lcwo.net/*"]');
+check('every host pattern is one planFor would accept',
+      MANIFEST.host_permissions.every(
+        h => planFor(h.replace('/*', '/groups')).mode === 'roundtrip'));
 
 /* ---------- the popup itself ---------- */
 check('the settings page is a real link',

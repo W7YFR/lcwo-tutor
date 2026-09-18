@@ -16,6 +16,7 @@
 importScripts('page.js');
 
 const SETTINGS = 'https://lcwo.net/cwsettings';
+const LCWO_TABS = ['https://lcwo.net/*', 'https://www.lcwo.net/*'];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function run(tabId, func, args = []) {
@@ -46,13 +47,22 @@ const tally = (r, chars) => [
   r.missing.length ? `not on the page: ${r.missing.join(' ')}` : null,
 ].filter(Boolean).join(' · ');
 
-async function applyFlow({tabId, url, chars, replace}) {
+async function applyFlow({tabId, windowId, url, chars, replace}) {
   const plan = planFor(url);
 
-  // get a tab that is showing the settings page, without touching anyone else's
+  // get a tab showing the settings page, without touching anyone else's
   let target = tabId;
   if (plan.mode === 'newtab') {
-    target = (await chrome.tabs.create({url: SETTINGS, active: true})).id;
+    // an LCWO tab already open in this window is the one to use - opening a
+    // second copy of a site you already have open is just clutter
+    const open = pickLcwoTab(
+      await chrome.tabs.query({windowId, url: LCWO_TABS}));
+    if (open) {
+      target = open.id;
+      await chrome.tabs.update(target, {url: SETTINGS, active: true});
+    } else {
+      target = (await chrome.tabs.create({url: SETTINGS, active: true})).id;
+    }
   } else if (plan.mode === 'roundtrip') {
     await chrome.tabs.update(target, {url: SETTINGS});
   }
@@ -78,7 +88,7 @@ async function applyFlow({tabId, url, chars, replace}) {
   if (!plan.back) return {ok: true, message: `${tally(r, chars)}. Saved.`};
   await chrome.tabs.update(target, {url: plan.back});
   return {ok: true, message: `${tally(r, chars)}. Saved, `
-          + `${plan.mode === 'newtab' ? 'and opened' : 'and back to'} ${plan.from}.`};
+          + `${plan.mode === 'newtab' ? 'now on' : 'and back to'} ${plan.from}.`};
 }
 
 async function badge(text, colour) {
