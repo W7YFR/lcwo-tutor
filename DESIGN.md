@@ -53,7 +53,7 @@ exactly the characters that are quietly wrong all week.
 ## Showing speed
 
 Speed lives on the session, so every scope wider than one session can hold
-several — the tile has to summarise. It averages **across runs**, not across
+several — the tile has to summarize. It averages **across runs**, not across
 sessions: a session you ran three times represents three times the practice at
 that speed, and weighting by session would let a one-run session at an unusual
 speed drag the figure around.
@@ -65,7 +65,7 @@ from the mean rather than counted as zero, and the tile says how many were left
 out.
 
 `Speeds in scope` at the bottom is the detail: one row per distinct
-character/effective pair, most practised first, with its own accuracy. It hides
+character/effective pair, most practiced first, with its own accuracy. It hides
 itself when there is only one speed, because then the tile has already said
 everything and a one-row table is just furniture.
 
@@ -187,7 +187,7 @@ grows with data rather than with the number of groups.
    session, a session splits by run. That is the "see it across levels" view.
 3. **Confusions** — `sent → heard` pairs, usually the most actionable panel.
 4. **Accuracy per run** — sparkline over the runs in scope. Only the first and
-   last runs are labelled on the axis; per-point labels collide past a handful
+   last runs are labeled on the axis; per-point labels collide past a handful
    of runs. Hover any point and the caption above names it and its accuracy.
 5. **Runs in scope** — one row per run; click any row to expand its errors,
    with the full group-by-group grid behind a toggle. The accuracy bar runs
@@ -306,6 +306,198 @@ WHERE s.char_wpm >= 20 ORDER BY s.started_at;
 
 Override paths with `LCWO_HOME`, `LCWO_DB`, or `LCWO_REPORTS`.
 
+
+## Moving into the browser
+
+The CLI is being ported into the extension so that using this needs nothing
+but a browser: no Python, no clone, no `make`. That is the whole reason - a CLI
+is not a neutral component when you want to hand the tool to somebody else in
+your cohort, it is the thing that makes it unshareable.
+
+The port lives in `lcwo-tools/src/`, in steps, each usable on its own. Step one
+- the grading core, the rollups and the data layer - is in and carries the same
+checks this file's selftest runs.
+
+**Grading stays derived, never stored.** A run records only what you typed; the
+session records the key. Every number on a report is computed at read time, so
+fixing a grading bug re-grades your whole history rather than leaving old
+sessions wrong for ever. This is why the core is pure functions over arrays: the
+same code runs over SQLite rows, IndexedDB records or a test fixture.
+
+**The store does not know what IndexedDB is.** It is written against a
+five-method backend (`all` / `get` / `put` / `del` / `clear`), so every query,
+every rollup and the whole soft-delete model run under node against an
+in-memory backend. Only `idb.js` needs a browser, and it holds no decisions.
+Without that split none of the data layer would be testable, and "the build
+fails if the tests fail" would be a guarantee about almost nothing.
+
+**Deleting is still soft, and hiding is still by containment.** A run is hidden
+when its own, its session's, or its group's `deleted_at` is set - the
+`live_groups` / `live_sessions` / `live_runs` views moved to read time. So
+binning a group is one field write rather than a cascade, and needs no
+transaction. `purge` is the one place that has to walk the tree, and it walks
+it *downwards*: SQLite gave the CLI `ON DELETE CASCADE` for free, and the first
+port of `purge` deleted a binned group and its sessions while orphaning the
+runs underneath. A test caught it; the order is now parents first, then sweep
+what they orphaned, which also makes an interrupted purge safe to repeat.
+
+**Timestamps are local, with an offset.** Every day-windowed number - "the last
+two days" - comes from slicing the date off the front of a timestamp.
+`Date.toISOString()` is UTC, which would file a 9pm session under tomorrow and
+quietly shift the trouble list. `clock.nowIso` writes what the Python writes,
+so imported and captured records sort together.
+
+**Practice sets are seedable.** `Math.random` cannot be, and a drill you cannot
+reproduce is a drill you cannot test. The JS generator will not produce the
+same groups as the Python one for a given seed - different algorithms - and
+does not need to: the checks are on the properties that matter (size, lengths,
+every character appearing, weighting favoring the worse ones), not on exact
+output.
+
+### The report has two hosts and one implementation
+
+The report was always browser code that happened to live inside Python string
+constants — 600-odd lines of it. Porting meant either writing it twice or
+getting it out of the strings, and two copies of a filter model drift within a
+week. So `app.js` and `report.css` are now plain files: `lcwo.py report` reads
+them off disk and inlines them into a self-contained file, and the extension's
+report page loads them directly. `lcwo.py` gave up 700 lines and its
+single-file property; what it bought is that there is nothing to keep in sync.
+
+The one thing the two hosts genuinely differ on is how the payload arrives.
+The CLI embeds it in a `<script id="data">` tag, because the file has to work
+when opened from disk with no server. The extension builds it from IndexedDB,
+which is async, so a script tag cannot wait for it — the page sets
+`LCWO_DATA` and then appends app.js. app.js takes whichever it finds:
+
+```js
+const DATA = typeof LCWO_DATA !== 'undefined' && LCWO_DATA
+  ? LCWO_DATA : JSON.parse(document.getElementById('data').textContent);
+```
+
+That leaves two things that could drift, and both are checked. The **markup**
+is a contract — every element app.js looks up by id has to exist in the CLI's
+shell and in the extension's page, and a test reads the shell straight out of
+`lcwo.py` to compare. The **payload shape** is the other, and it is checked
+three ways: a field-by-field test over a fixture, a diff of the two payloads
+built from the live database (identical, bar Python spelling whole speeds as
+`25.0` where JS says `25` — app.js coerces with `+`, so nothing downstream can
+tell), and a pass in `test_report.py` that runs the whole fixture suite again
+with a JS-built payload handed in through `LCWO_DATA`.
+
+### The page cannot hold the database
+
+A content script's `indexedDB` is the *page's* — `lcwo.net`'s — not the
+extension's. Recording from the content script would have put every session
+you have ever copied inside LCWO's site storage, to be wiped whenever you
+cleared data for that site, and invisible to the report. So the bar on
+`/groups` only reads the DOM and messages the service worker, which runs in
+the extension's own origin and owns the database. A test asserts the page
+side never names `indexedDB` or the store, because this is the kind of rule
+that gets broken by someone reaching for the obvious shortcut.
+
+### A session is its key
+
+Pasting gave the key only at the end, in the results table, which is why runs
+were stored ungraded and graded retroactively. The browser gives it at the
+start: LCWO decides the groups when the page loads and keeps them in a hidden
+`text` field. So a session is *identified* by its key — copy the same clip
+again and that is another run, not another session — and every run grades the
+moment it is recorded.
+
+### The bar has to name the destination, not a plausible one
+
+Closing a group means that homework is done, so when the most recent one is
+closed the next run starts a *new* assignment rather than reopening it or
+falling back to whatever else is still open. That is right — dumping today's
+practice into an assignment left open a week ago would be worse.
+
+What was wrong was saying so. The select listed open groups and defaulted to
+the first, so with S4HW3 closed and a stale S2HW3 still open it displayed
+S2HW3 while recording would have created S5HW1. A control that names the
+wrong destination is worse than one that names none: you only find out after
+the data has gone somewhere else. `context` now reports the target
+explicitly, including the case where it does not exist yet, and the select
+follows it.
+
+### Recording twice is the failure worth designing against
+
+The results table stays on the page until it is replaced. It is there while
+you work on the next clip, and a reload serves it again. Two defences, because
+they cover different mistakes:
+
+- The bar picks a result up **only when the page has a result and no exercise
+  form**, which is the state submitting leaves you in. An exercise page also
+  carries a table — the previous attempt's — and recording that would file
+  last clip's work against this one.
+- Every stored result carries a **signature** of its sent groups, what was
+  copied and the error counts. Reloading the graded page, or coming back to it
+  an hour later, finds the signature already on file and stores nothing.
+
+### Filling the box beats applying behind your back
+
+Changing the window refills the box immediately. The first version only
+refilled on a button press, which reads as broken: a control labeled "your
+trouble letters" with a day window beside it has made a promise, and leaving
+the letters stale while you hunt for the button that commits the change is not
+keeping it.
+
+Once the window refills on its own, the button had one job left — undoing a
+hand edit — which is not worth a control in a 320px popup, so it went. What
+replaced it runs the other way: typing into the box blanks the window. The
+pair is a single claim, "these letters are your trouble list over this
+window", and an edit makes half of it false. A window still reading "last 7
+days" over a list you typed yourself is the report equivalent of a stale
+filter chip.
+
+Which is why there is exactly one way to write to that box. Typing announces
+itself through an `input` event, but a programmatic write does not fire one —
+so **Read page**, which fills the box with LCWO's current selection, blanked
+nothing and left the window lying. Every write now goes through `setChars`,
+which takes "is this the trouble list?" as an argument. A rule that has to be
+remembered at each call site is one that gets forgotten at the next.
+
+### Why it fills rather than applies
+
+
+The popup could take your trouble letters straight to the settings page in one
+click, and the first sketch did. It is worse. Thirteen checkboxes getting
+ticked on your behalf, chosen by a threshold you cannot see, is the kind of
+thing you stop trusting the first time it picks something surprising — and
+then you go back to the CLI to check, which is the round trip the port was
+meant to remove. Filling the box costs one click and makes the decision
+reviewable before it is applied.
+
+### The export is the contract between the two programs
+
+`lcwo.py export` writes the record shapes the browser store keeps, not the
+table shapes SQLite keeps: `key_json` and `attempt_json` come out as real
+arrays, because the file is already JSON and a string holding a list inside it
+helps nobody. `raw_paste` rides along even though the browser never writes one,
+so a round trip through an export loses nothing.
+
+Binned rows are exported too, still marked as binned. An export that quietly
+emptied the bin would not be something you could restore from.
+
+Import is a restore, not a merge: it replaces what is in the browser, and keeps
+ids so the same file imported twice is one database rather than two. A file
+claiming a newer format version is refused outright — the failure mode of
+guessing at a shape you do not know is a database that looks fine and grades
+wrong, which is the one outcome worth refusing to risk.
+
+Both sides are checked against the same real data rather than against each
+other's fixtures: exporting the live database and running the JS rollups over
+it reproduces the Python numbers exactly — every character's miss and sent
+count, every confusion pair, every per-group breakdown, the trouble list and
+the day windows.
+
+### Deliberately not built yet
+
+- **No automatic export.** Export is a deliberate act, and the popup counts the
+  days since the last one rather than running one on a schedule.
+- **No paste fallback.** Capture reads the page instead. If LCWO changes its
+  markup the scraper will need updating, which is a known and cheap cost; a
+  second input path built against a failure that has not happened is not.
 
 ## Extending
 

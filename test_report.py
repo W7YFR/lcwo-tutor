@@ -226,14 +226,14 @@ check('the split partitions every run with a speed',
 check('the split is one entry per distinct pair',
       split.length === new Set(graded.map(r => `${+S[r.sid].charWpm}/${+S[r.sid].effWpm}`)).size,
       split.map(s => s.k).join(' '));
-check('the split is most-practised first',
+check('the split is most-practiced first',
       split.every((s, i) => !i || split[i - 1].runs.length >= s.runs.length));
 const top = document.getElementById('app').innerHTML;
 check('the wpm tile leads the headline',
       top.indexOf('wpm') < top.indexOf('chars copied'));
 check('the scope line carries the speed too',
       /wpm/.test(document.getElementById('scopeline').innerHTML));
-check('a varying speed is labelled as an average',
+check('a varying speed is labeled as an average',
       top.includes('average of ' + split.length + ' speeds')
       && document.getElementById('scopeline').innerHTML.includes('avg '));
 check('the breakdown appears when speeds differ', top.includes('Speeds in scope'));
@@ -351,7 +351,7 @@ const withT = DATA.runs.some(r => r.cells.some(c => c[2].includes('t')));
 const h0 = document.getElementById('app').innerHTML;
 check('Transposed column shown iff transpositions exist',
       h0.includes('Transposed') === withT, 'hasTransposition=' + withT);
-check('Miss rate column labelled', h0.includes('Miss rate'));
+check('Miss rate column labeled', h0.includes('Miss rate'));
 
 // ---- sparkline: hover targets, not a wall of text ----
 check('one hover target per run',
@@ -360,7 +360,7 @@ check('at most two axis labels',
       (h0.match(/<text[^>]*>/g) || []).length <= 2);
 check('caption present', h0.includes('id="sparkcap"'));
 
-// ---- bars are graded red->green, not one flat colour ----
+// ---- bars are graded red->green, not one flat color ----
 const hues = [...h0.matchAll(/hsl\((\d+) 62%/g)].map(m => +m[1]);
 check('bars span a range of hues', new Set(hues).size > 2, 'distinct=' + new Set(hues).size);
 check('a poor score is red-ish', Math.min(...hues) < 45, 'min=' + Math.min(...hues));
@@ -395,6 +395,51 @@ for (const b of document.getElementById('quick').querySelectorAll('button')){
 }
 done();
 """
+
+
+JS_PAYLOAD_DRIVER = r"""
+const fs = require('fs');
+const R = __ROOT__ + '/lcwo-tools/';
+const {memoryBackend} = require(R + 'test/memory.js');
+const store = require(R + 'src/data/store.js');
+const rollup = require(R + 'src/core/rollup.js');
+const {buildPayload} = require(R + 'src/report/payload.js');
+(async () => {
+  const db = memoryBackend();
+  await store.load(db, JSON.parse(fs.readFileSync(0, 'utf8')));
+  const views = (await store.loadAll(db)).map(rollup.groupView);
+  process.stdout.write(JSON.stringify(
+    buildPayload(views, await store.listOperators(db), {generated: 'FIXED'})));
+})();
+"""
+
+
+def js_payload(export: dict, node: str) -> str | None:
+    """Build the payload the way the extension does: in JS, out of an export.
+
+    The point is to exercise the path the CLI never takes. Python builds its
+    payload from SQLite; the extension builds an identical one from IndexedDB
+    and hands it to the same app.js through LCWO_DATA. Running the same
+    assertions over that proves the two hosts really are interchangeable.
+    """
+    root = json.dumps(str(Path(__file__).resolve().parent))
+    r = subprocess.run([node, "-e", JS_PAYLOAD_DRIVER.replace("__ROOT__", root)],
+                       input=json.dumps(export), capture_output=True, text=True)
+    if r.returncode:
+        print("  could not build the payload in JS:\n" + r.stderr.strip())
+        return None
+    return r.stdout
+
+
+def harness_handed(payload: str, tests: str, expect: dict | None = None) -> str:
+    """The extension's path: no data script tag, the payload handed straight in."""
+    return "\n".join([
+        SHIM,
+        f"const LCWO_DATA = {payload};",
+        f"const EXPECT = {json.dumps(expect or {})};",
+        lcwo.asset("app.js"),
+        tests,
+    ])
 
 
 def harness(html: str, tests: str, expect: dict | None = None) -> str:
@@ -473,8 +518,18 @@ def main() -> int:
         expect = {"chars": sum(r.grade.total_chars for r in runs),
                   "wrong": sum(r.grade.wrong_chars for r in runs)}
         html = lcwo.build_report(views, "Fixture", lcwo.list_operators(con))
+        export = lcwo.export_data(con)
         con.close()
         ok &= run("fixture", harness(html, FIXTURE_TESTS, expect), node)
+
+        # the same fixture again, but through the extension: payload built in
+        # JS from an export, handed to app.js rather than read from a tag
+        payload = js_payload(export, node)
+        if payload is None:
+            ok = False
+        else:
+            ok &= run("extension payload",
+                      harness_handed(payload, FIXTURE_TESTS, expect), node)
 
     if lcwo.DB_PATH.exists():
         con = lcwo.connect()

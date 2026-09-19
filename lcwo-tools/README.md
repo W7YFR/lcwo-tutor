@@ -14,6 +14,7 @@ Chrome doesn't allow installing an unpacked extension from a file, so:
 1. Open `chrome://extensions`
 2. Turn on **Developer mode** (top right)
 3. **Load unpacked** → pick this `lcwo-tools/` directory
+   (the sources load as they are; `dist/` is only for sharing)
 
 It shows up as a dit-dah icon; pin it if you want it on the toolbar.
 
@@ -71,14 +72,184 @@ limited to LCWO over HTTPS, and the URL check is anchored, so a lookalike like
 `storage` is local only — it remembers your last list so the popup reopens
 where you left it. Nothing leaves your machine.
 
+## What this is becoming
+
+Today this extension does one job. It is being grown into the whole tool -
+recording runs straight off the LCWO page, keeping them in IndexedDB, and
+building the report and the trouble lists in the popup - so that using it
+needs nothing but a browser. The CLI stays as the reference implementation
+the port is checked against, and as the way in and out of a plain file.
+
+The port is in steps, each one usable on its own:
+
+1. **the core and the store** - grading, rollups, practice generators, data
+   layer. Done; no UI, but every check the CLI's selftest runs now runs here.
+2. **import** - `lcwo.py export` into IndexedDB, so the rest is built against
+   real practice data rather than fixtures. Done; the data page below.
+3. **the report** - as an extension page reading IndexedDB, live instead of a
+   generated file. Done; the same app.js the CLI inlines.
+4. **trouble and practice** in the popup, wired straight into the applier
+   below, so the list never has to be copied anywhere. Done.
+5. **capture** - buttons on `/groups` that record a run, and picking up LCWO's
+   own grading when you submit. Done.
+6. **export**, and a note in the popup of how long since the last one.
+
+## Recording, on the page
+
+A bar appears at the top of `lcwo.net/groups`:
+
+> **LCWO-TOOLS**  W7YFR · S2HW3 · session 2 · run 3   [ Record run ]  [ S2HW3 ▾ ]
+
+**Submitting is all you have to do.** When LCWO grades an attempt, the bar
+picks the result up and stores it — the sent groups, what you copied, LCWO's
+own error count per group, the speed it actually sent at, and how long it
+took. The session closes itself.
+
+**Record run** is for the attempts in between. LCWO settles the groups it
+will send when the page loads and keeps them in a hidden field, so the key is
+known before you have copied a note of it. That means you can play the clip,
+copy what you can, record it, replay and try again — every attempt a run
+against one key, and every one of them graded as it is recorded rather than
+waiting for the results table.
+
+The group select shows **where a run will actually land**, which is not
+always an assignment that exists yet. Close S4HW3 and the next run starts
+S5HW1 — the select says so, rather than naming some older group you left
+open.
+
+**Close S4HW3** finishes the assignment being recorded into: no more runs go
+there, and the next one starts the assignment after it. The work inside is
+untouched. To finish a different one, select it first — the button only ever
+closes the one named on it, so there is no list to mis-click.
+
+Assignments you have closed are listed under the open ones; picking one asks
+before reopening it, because closing meant something.
+
+Two things it deliberately does not do. It never records the results table
+sitting on an exercise page — that is the *previous* attempt, and filing it
+against this clip would be quietly wrong. And re-recording is impossible:
+every stored result carries a signature, so reloading the graded page or
+coming back to it later changes nothing.
+
+## Your trouble letters, without the clipboard
+
+This is the loop closing. The list used to come out of `make trouble PB=1`,
+onto the clipboard, into the popup. Now the popup reads it out of IndexedDB:
+
+> **Your trouble letters** [ last 7 days ▾ ]
+
+Change the window and the box fills with the worse half of what you have been
+missing over it — the same characters `make trouble` prints, from the same
+numbers. Then **Apply** as usual.
+
+Type over the box, or press **Read page**, and the window goes blank: what is
+in there is no longer your trouble list, and a window still reading "last 7
+days" would be claiming otherwise. Pick a window again and it comes back.
+
+It fills the box rather than applying straight off. That saves nothing in
+clicks, but you get to see which characters you are about to set on yourself,
+and silently ticking thirteen boxes you never read is not an improvement on
+pasting them.
+
+The window counts **days you practiced**, not calendar days, so skipping a
+Tuesday reaches back past it. Only windows shorter than your history are
+offered — a 14-day window over 10 days of practice is "all time" wearing a
+hat. And the threshold applies to the total across the window, not to each
+day inside it: one miss a day for two days is a character missed twice.
+
+## Sending practice
+
+**Sending practice** opens `make practice` as a page: groups drawn from the
+characters you miss, weighted so the worst come round most, each character
+getting a run of its own first. Below that are the pairs you mix up — H/S and
+S/H are one drill, and their counts add — with groups that always hold both,
+because the contrast is the thing being practiced.
+
+**New set** redraws, **Copy** takes the groups, and typing into *Or just
+these* ignores the statistics entirely for when you already know what you want
+to drill.
+
+## The report
+
+**Progress report** in the popup opens the same report `make report` builds -
+same filters, same tables, same charts - except it reads IndexedDB when you
+open it rather than being a file written at some point in the past.
+
+There is only one implementation. `src/report/app.js` and `report.css` are
+plain files: the CLI inlines them into a self-contained HTML file, and the
+extension page loads them as-is. The only difference either can see is where
+the payload comes from - a `<script id="data">` tag in the CLI's file, or
+IndexedDB here - and app.js takes whichever is there.
+
+One deliberate difference in behavior: the CLI scopes a report to the current
+operator, while this loads everyone and lets the Operator filter narrow it,
+because in a page the control is right there.
+
+## Moving your practice in and out
+
+The database lives in this browser profile, so there are two doors.
+
+```
+python3 lcwo.py export        # writes exports/lcwo-<date>.json
+```
+
+Open the extension's **Import / export practice data** link (or
+`chrome://extensions` → Details → Extension options), pick that file, and
+everything lands in IndexedDB. Import is a **restore, not a merge**: it
+replaces what is in the browser. Ids are kept, so importing the same file
+twice leaves one database rather than two.
+
+**Download a copy** goes the other way, and is the thing that makes the data
+yours rather than Chrome's. Nothing exports on a schedule - the page just
+tells you how long it has been.
+
+An export holds every operator, group, session and run, the bin included, and
+carries the original pasted text along with the parsed attempt so a round trip
+loses nothing. A file written by a newer version of lcwo is refused rather
+than half-read: a database that looks fine and grades wrong is worse than one
+that will not load.
+
+## Layout
+
+| | |
+|---|---|
+| `src/core/` | grading, rollups, practice, timestamps. Pure functions, no storage and no DOM |
+| `src/report/` | `app.js` and `report.css`, shared with the CLI, plus `payload.js` which builds what app.js eats |
+| `src/data/` | `schema.js` the record shapes, `store.js` every query as logic over plain records, `idb.js` the IndexedDB plumbing, `analysis.js` the questions the pages ask, `recorder.js` turning a page into rows |
+| `src/ext/` | the extension itself: `page.js`, `background.js`, `popup.js`, `popup.html` |
+| `test/` | the checks, and an in-memory backend to run them against |
+| `build.js` | run the checks, then zip for sharing |
+
+Two splits are load-bearing.
+
+**The grading core touches nothing.** It takes arrays and returns numbers, so
+the same functions run over a live database, an import or a test fixture.
+Grading is also never stored - a run keeps only what you typed and the session
+keeps the key - so fixing a grading bug re-grades your whole history instead
+of leaving old sessions wrong for ever.
+
+**The store does not know what IndexedDB is.** It talks to the five-method
+backend described in `schema.js`, which means all of it runs under node
+against an in-memory backend. `idb.js` is the only file that needs a browser,
+and there is deliberately almost nothing in it.
+
+Each module reads its dependencies through `require` under node and off
+`self.LCWO` in a page, so the same files load both ways with no bundler.
+`src/ns.js` creates that namespace and has to be the first script loaded.
+
 ## Files
 
 | | |
 |---|---|
-| `page.js` | the functions that run *inside* the LCWO page, plus the URL routing |
-| `background.js` | the service worker: navigate → tick → save → verify → return |
-| `popup.js` | the popup, kept thin because it gets dismissed mid-flight |
-| `popup.html` | markup and styles |
+| `src/ext/page.js` | the functions that run *inside* the LCWO page, plus the URL routing |
+| `src/ext/background.js` | the service worker: navigate → tick → save → verify → return |
+| `src/ext/popup.js` | the popup, kept thin because it gets dismissed mid-flight |
+| `src/ext/popup.html` | markup and styles |
+| `src/ext/data.html` `data.js` | import, export, and what is in the database |
+| `src/ext/report.html` `report.js` | the report page: build the payload, then hand it to app.js |
+| `src/ext/capture.js` | reads an exercise or a result off the LCWO page |
+| `src/ext/hud.js` `hud.css` | the bar on `/groups`; asks the worker to store things |
+| `src/ext/practice.html` `practice.js` | sending practice and confusion-pair drills |
 
 The split matters. `chrome.tabs.update` on the active tab dismisses the popup,
 and a dismissed popup takes its JavaScript with it — driven from there, the
@@ -86,14 +257,22 @@ round trip died right after the first navigation and left you on the settings
 page with nothing ticked. Anything that outlives a navigation belongs in the
 worker.
 
-## Tests
+## Tests and builds
 
 ```
-node lcwo-tools/test_popup.js     # or `make test` from the parent directory
+node lcwo-tools/test/run.js          # everything
+node lcwo-tools/test/run.js core     # just one file
+make test                            # with the Python checks as well
+make build                            # checks, then dist/lcwo-tools-<version>.zip
 ```
+
+`make build` will not produce a zip if a check fails. A release that fails its
+own grading checks would hand somebody wrong numbers about their own copy,
+which is worse than no release. Development does not need a build at all -
+load this directory unpacked and reload after an edit.
 
 The page-side functions are plain, self-contained functions (`chrome.scripting`
-serialises them into the page, so they cannot close over anything) and the test
+serializes them into the page, so they cannot close over anything) and the test
 runs them against a small DOM shim built from the real markup — including the
 awkward bits: `charquot` for `"`, Cyrillic that must not collide with Latin,
 the unrelated inputs sitting among the checkboxes, and the character boxes

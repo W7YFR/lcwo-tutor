@@ -2,7 +2,7 @@
  * lcwo-tools - the page-side half.
  *
  * These functions are handed to chrome.scripting.executeScript, which
- * serialises them and runs them inside the LCWO page. Each one has to be
+ * serializes them and runs them inside the LCWO page. Each one has to be
  * entirely self-contained: nothing from this file's scope travels with it,
  * which is why small things like the alias map are repeated rather than shared.
  *
@@ -16,7 +16,7 @@ function parseChars(text) {
 
 /*
  * Runs in the page, so it has to be self-contained - chrome.scripting
- * serialises the function and nothing from this file's scope comes with it.
+ * serializes the function and nothing from this file's scope comes with it.
  * That is why the alias map is repeated rather than shared.
  */
 function applyInPage(wanted, replace) {

@@ -10,7 +10,7 @@ LCWO   := $(PYTHON) lcwo.py
 
 .DEFAULT_GOAL := session
 .PHONY: session record report html user groups trouble practice key speed delete \
-        restore trash purge db merge test clean help
+        restore trash purge db merge export test build clean help
 
 # every data target takes U=<call sign> to work as another operator
 OP = $(if $(U),-u $(U))
@@ -88,13 +88,22 @@ db:
 merge:
 	@$(LCWO) merge $(if $(APPLY),--apply)
 
+## export: write the whole database as JSON for the extension  [O=<path>]
+export:
+	@$(LCWO) export $(if $(O),-o $(O)) $(if $(COMPACT),--compact)
+
 ## test: run the Python checks and the browser-side tests
 test:
 	@$(LCWO) selftest
 	@$(PYTHON) test_report.py
 	@printf '\n\033[1m── extension %s\033[0m\n' "─────────────────────────────────────────────────"
-	@command -v node >/dev/null && node lcwo-tools/test_popup.js \
+	@command -v node >/dev/null && node lcwo-tools/test/run.js \
 		|| echo "  node not found - skipping extension tests"
+
+## build: run the checks, then zip the extension for sharing
+build:
+	@command -v node >/dev/null || { echo "node is needed to build"; exit 1; }
+	@node lcwo-tools/build.js
 
 ## clean: remove Python bytecode caches (leaves the database and reports alone)
 clean:
@@ -111,7 +120,7 @@ help:
 	@echo
 	@echo "  variables: U= operator  G= group  S= session  R= run"
 	@echo "             D= last N practice days   N= trouble threshold"
-	@echo "             C= how many groups   CHARS= practise these instead"
+	@echo "             C= how many groups   CHARS= practice these instead"
 	@echo "             LIST=1 just the letters   PB=1 copy them to the clipboard"
 	@echo "             CHAR=/EFF= wpm   Y=1 skip prompt   APPLY=1 write merge"
 	@echo "             EVERYONE=1 every operator at once"

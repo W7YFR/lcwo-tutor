@@ -16,7 +16,10 @@ exports/
 # catches `lcwo.py report -o somewhere.html` landing in the tree
 *.html
 # ...except the browser extension, which is source
-!lcwo-tools/*.html
+!lcwo-tools/src/ext/*.html
+
+# built extension zips - `make build` remakes them from source
+lcwo-tools/dist/
 
 *.bak
 

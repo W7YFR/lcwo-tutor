@@ -45,6 +45,13 @@
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   label.row input[type=checkbox] { border-radius: 4px; }
   a { color: var(--accent); }
+  p.foot { margin: 9px 0 0; font-size: 11.5px; }
+  .trouble { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; }
+  .trouble label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .trouble select { flex: 1; min-width: 0; font: inherit; font-size: 12px;
+                    padding: 3px 5px; border-radius: 7px; border: 1px solid var(--line);
+                    background: var(--panel); color: var(--ink); }
+  .trouble select:disabled { opacity: .5; cursor: default; }
   a code { color: inherit; }
 </style>
 
@@ -52,6 +59,11 @@
 <h1>lcwo-tools</h1>
 <p class="sub">Open <a href="https://lcwo.net/cwsettings" target="_blank"
    rel="noreferrer"><code>lcwo.net/cwsettings</code></a>, paste your list, hit Apply.</p>
+
+<div class="trouble">
+  <label for="window">Your trouble letters</label>
+  <select id="window"></select>
+</div>
 
 <textarea id="chars" placeholder="L,F,U,D,H,Y,Z,B,G,P,Q" spellcheck="false"></textarea>
 
@@ -66,7 +78,20 @@
 </div>
 
 <p id="status">From the CLI: <code>make trouble PB=1</code></p>
+<p class="foot"><a href="report.html" target="_blank">Progress report</a> &middot; <a href="practice.html" target="_blank">Sending practice</a> &middot; <a href="data.html" target="_blank">Import / export</a></p>
 </div>
 
+<script src="../ns.js"></script>
+<script src="../core/counter.js"></script>
+<script src="../core/clock.js"></script>
+<script src="../core/rng.js"></script>
+<script src="../core/grade.js"></script>
+<script src="../core/assign.js"></script>
+<script src="../core/practice.js"></script>
+<script src="../core/rollup.js"></script>
+<script src="../data/schema.js"></script>
+<script src="../data/store.js"></script>
+<script src="../data/idb.js"></script>
+<script src="../data/analysis.js"></script>
 <script src="page.js"></script>
 <script src="popup.js"></script>

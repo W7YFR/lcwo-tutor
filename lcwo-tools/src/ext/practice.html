@@ -1,0 +1,110 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>lcwo-tools · sending practice</title>
+<style>
+  :root { color-scheme: light dark; --ink:#1b1b19; --muted:#6b6b66; --line:#d8d7d2;
+          --bg:#fff; --panel:#f6f5f2; --accent:#1aa9ff; --ok:#2f8f5b; --bad:#c0392b;
+          --surround:#dedcd6; --on-accent:#041a28; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e8e8e6; --muted:#9a9a95; --line:#33363c; --bg:#1e2024;
+            --panel:#26292e; --accent:#1aa9ff; --ok:#5fbf8a; --bad:#f0736a;
+            --surround:#0e0f12; --on-accent:#041a28; }
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--surround); }
+  body { margin: 0; padding: 24px 16px; color: var(--ink);
+         font: 14px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 18px; color: var(--muted); font-size: 12.5px; }
+  section { background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+            padding: 16px 18px; margin-bottom: 14px; }
+  h2 { font-size: 13px; margin: 0 0 10px; letter-spacing: .03em; text-transform: uppercase;
+       color: var(--muted); font-weight: 600; }
+  .controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  .field span { color: var(--muted); font-size: 11.5px; }
+  select, input { font: inherit; font-size: 13px; padding: 5px 7px; border-radius: 8px;
+                  border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+  input[type=number] { width: 72px; }
+  input[type=text] { width: 130px; text-transform: uppercase; letter-spacing: .06em;
+                     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  button { font: inherit; font-weight: 600; padding: 6px 14px; border-radius: 9px;
+           border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+           cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent);
+                   color: var(--on-accent); }
+  .groups { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0;
+            font: 22px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+            letter-spacing: .1em; }
+  .groups span { background: var(--panel); border-radius: 8px; padding: 2px 10px; }
+  .pair { margin: 0 0 10px; display: flex; gap: 12px; align-items: baseline;
+          flex-wrap: wrap; }
+  .pair b { font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+            min-width: 62px; }
+  .pair .n { color: var(--muted); font-size: 11.5px; }
+  .pair .g { font: 18px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+             letter-spacing: .1em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+  .chip { background: var(--panel); border-radius: 7px; padding: 2px 9px;
+          font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .chip i { font-style: normal; color: var(--muted); font-size: 11px; }
+  .note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+  #status { margin: 12px 0 0; font-size: 12.5px; min-height: 1.4em; color: var(--muted); }
+  #status.ok { color: var(--ok); }
+  #status.bad { color: var(--bad); }
+  a { color: var(--accent); }
+</style>
+
+<main>
+<h1>Sending practice</h1>
+<p class="sub">Groups built from the characters you miss on receive — key them,
+   do not copy them.</p>
+
+<section>
+  <div class="controls">
+    <label class="field"><span>From</span><select id="window"></select></label>
+    <label class="field"><span>Groups</span>
+      <input type="number" id="count" value="24" min="1" max="200"></label>
+    <label class="field"><span>Or just these</span>
+      <input type="text" id="chars" placeholder="KYV" spellcheck="false"></label>
+    <button id="again" class="primary" type="button">New set</button>
+    <button id="copy" type="button">Copy</button>
+  </div>
+  <p id="status"></p>
+</section>
+
+<section id="set-box">
+  <h2>Practice set</h2>
+  <p class="groups" id="set"></p>
+</section>
+
+<section id="pairs-box">
+  <h2>Pairs you mix up</h2>
+  <div id="pairs"></div>
+  <p class="note">Each group holds both characters, so you are keying the
+     contrast rather than the character.</p>
+</section>
+
+<section id="trouble-box">
+  <h2>What this is built from</h2>
+  <p class="chips" id="trouble"></p>
+  <p class="note" id="trouble-note"></p>
+</section>
+</main>
+
+<script src="../ns.js"></script>
+<script src="../core/counter.js"></script>
+<script src="../core/clock.js"></script>
+<script src="../core/rng.js"></script>
+<script src="../core/grade.js"></script>
+<script src="../core/assign.js"></script>
+<script src="../core/practice.js"></script>
+<script src="../core/rollup.js"></script>
+<script src="../data/schema.js"></script>
+<script src="../data/store.js"></script>
+<script src="../data/idb.js"></script>
+<script src="../data/analysis.js"></script>
+<script src="practice.js"></script>

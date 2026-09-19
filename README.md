@@ -78,7 +78,7 @@ is set:
   and a two-day range lists it at ×2; the columns beside it decompose that
   total by day (or session, or assignment) rather than each applying the
   threshold again. The rightmost column is how often you got it **right** —
-  `D` missed 11 of 122 sent reads 91% — coloured red through green, so a
+  `D` missed 11 of 122 sent reads 91% — colored red through green, so a
   character you are mostly getting is easy to tell from one you are not
 - **Confusions** — `Y → L ×5`, `K → R ×4`. Usually the most useful panel: a
   consistent substitution means two rhythms you are conflating, which needs a
@@ -87,7 +87,7 @@ is set:
   you while scrolling. Speed belongs to the session, so anything wider than one
   can hold several; the tile averages across runs and says `avg` when it varies
 - **Speeds in scope** — the breakdown at the bottom: every character/effective
-  pair you practised at, with sessions, runs, chars and accuracy, so *"am I
+  pair you practiced at, with sessions, runs, chars and accuracy, so *"am I
   actually worse at 30 wpm"* is one glance rather than a guess
 - **Accuracy per run** — hover any point for its run and score
 - **Runs in scope** — click a row to see exactly what went wrong, group by group
@@ -106,7 +106,7 @@ make trouble D=2        letters missed 2+ times over your last 2 practice days
 make trouble D=7 N=3    missed 3+ times over the last 7
 ```
 
-`D=` counts days you actually practised, not calendar days — skip a Tuesday and
+`D=` counts days you actually practiced, not calendar days — skip a Tuesday and
 `D=2` still means your last two sessions' worth. Same threshold rule as the
 report: the count is the total over the whole window.
 
@@ -132,6 +132,28 @@ tab you already have open (or opens one) and lands you on Code Groups ready to
 go. Either way, changing your practice set
 is a paste and a click. See [its README](lcwo-tools/README.md) to install it.
 
+Recording happens on the LCWO page itself now: a bar on `lcwo.net/groups`
+picks up each graded attempt as you submit it — groups, copy, error counts,
+speed and timing — and records the attempts in between when you ask. Nothing
+to paste, and nothing to remember to do afterwards.
+
+Your trouble letters now come out of the extension too, so the round trip
+through the clipboard is gone: pick a window in the popup, hit **Use**, hit
+**Apply**, and the characters you have been missing are the ones LCWO sends
+you next. Sending practice has its own page alongside it.
+
+The report also runs in there now — same filters and tables, reading the
+browser's copy of your practice instead of a file written earlier. It is the
+same code: `lcwo-tools/src/report/app.js` is what `make report` inlines.
+
+The extension is also where this is heading. It is being grown into the whole
+tool — recording runs straight off the LCWO page into IndexedDB, with the
+report and the trouble lists built in the popup — so that using it needs
+nothing but a browser rather than Python and a terminal. The grading core, the
+rollups and the data layer are ported and carry the same checks as the CLI;
+`lcwo-tools/README.md` has the plan and what is done so far. The CLI stays as
+the reference implementation, and as the way in and out of a plain file.
+
 ## Sending practice
 
 The copy side tells you which characters you are missing; `make practice` turns
@@ -148,13 +170,13 @@ $ make practice D=2 C=12
 
 It opens with each character on its own — its rhythm with nothing to compare it
 to, worst first — then mixes them, drawn weighted by how often you missed them,
-so the worst come round most and you practise the transitions between them too.
+so the worst come round most and you practice the transitions between them too.
 At most half the set is solo runs; anything crowded out that way is planted into
 the mixed groups, so every character you are working on still appears.
 
 `PAIRS=1` adds a second block for the characters you actually mix up, taken from
 the confusion table — every group in it holds both halves of the pair, because
-the thing to practise is the contrast:
+the thing to practice is the contrast:
 
 ```
 ── Confusions — the pairs you mix up
@@ -168,7 +190,7 @@ make practice              your trouble letters, all time, 24 groups
 make practice PAIRS=1      plus drills for the pairs you confuse
 make practice D=2          just what you have been missing lately
 make practice N=3 C=40     stricter threshold, longer drill
-make practice CHARS=kyv    forget the stats, practise these
+make practice CHARS=kyv    forget the stats, practice these
 make practice PLAIN=1      one line, no formatting, for piping
 make practice SEED=7       the same set again
 ```
@@ -191,7 +213,9 @@ make practice SEED=7       the same set again
 | `make db` | SQLite shell on the database |
 | `make key` | grade a session you left unfinished |
 | `make speed` | show or set a group's wpm — `G=2 CHAR=25 EFF=6` |
+| `make export` | write the whole database as JSON for the extension |
 | `make test` | run the Python and browser test suites |
+| `make build` | run the checks, then zip the extension for sharing |
 
 All of it works without `make` too: `python3 lcwo.py <command>`.
 

@@ -13,15 +13,32 @@
     "https://www.lcwo.net/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/ext/background.js"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/ext/popup.html",
     "default_title": "lcwo-tools"
   },
   "icons": {
     "16": "icons/16.png",
     "48": "icons/48.png",
     "128": "icons/128.png"
-  }
+  },
+  "options_page": "src/ext/data.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://lcwo.net/groups*",
+        "https://www.lcwo.net/groups*"
+      ],
+      "js": [
+        "src/ext/capture.js",
+        "src/ext/hud.js"
+      ],
+      "css": [
+        "src/ext/hud.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
 }
