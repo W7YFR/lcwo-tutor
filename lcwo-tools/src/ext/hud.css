@@ -1,0 +1,48 @@
+/*
+ * The bar lcwo-tools puts on lcwo.net/groups.
+ *
+ * Everything is namespaced and every property it cares about is stated
+ * outright: this lands in someone else's stylesheet, and inheriting LCWO's
+ * table styles would make it look like part of the site by accident.
+ */
+#lcwo-tools-bar, #lcwo-tools-bar * { box-sizing: border-box; }
+
+#lcwo-tools-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2147483000;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 7px 12px; margin: 0;
+  background: #14161a; color: #e8e8e6;
+  border-bottom: 2px solid #1aa9ff;
+  font: 13px/1.4 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, .35);
+}
+#lcwo-tools-bar.is-hidden { display: none; }
+
+/* the page starts under it rather than behind it */
+body.lcwo-tools-shifted { padding-top: 46px !important; }
+
+#lcwo-tools-bar .lt-mark {
+  font-weight: 700; letter-spacing: .08em; color: #1aa9ff; font-size: 11px;
+}
+#lcwo-tools-bar .lt-where { font-variant-numeric: tabular-nums; }
+#lcwo-tools-bar .lt-where b { color: #fff; font-weight: 600; }
+#lcwo-tools-bar .lt-sep { color: #6b7280; margin: 0 2px; }
+#lcwo-tools-bar .lt-status { flex: 1 1 200px; color: #9a9a95; font-size: 12px; }
+#lcwo-tools-bar .lt-status.is-ok { color: #5fbf8a; }
+#lcwo-tools-bar .lt-status.is-bad { color: #f0736a; }
+
+#lcwo-tools-bar button, #lcwo-tools-bar select {
+  font: inherit; font-size: 12px; color: #e8e8e6; background: #22262c;
+  border: 1px solid #3a3f47; border-radius: 7px; padding: 4px 10px; cursor: pointer;
+}
+#lcwo-tools-bar button:hover:enabled, #lcwo-tools-bar select:hover {
+  border-color: #1aa9ff;
+}
+#lcwo-tools-bar button:disabled { opacity: .45; cursor: default; }
+#lcwo-tools-bar button.lt-primary {
+  background: #1aa9ff; border-color: #1aa9ff; color: #041a28; font-weight: 600;
+}
+#lcwo-tools-bar .lt-close {
+  background: none; border: none; color: #6b7280; font-size: 15px; padding: 0 4px;
+}
+#lcwo-tools-bar .lt-close:hover { color: #e8e8e6; }

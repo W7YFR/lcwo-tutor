@@ -50,9 +50,9 @@ exports.run = function (check) {
   on(fixture('groups-graded.html'));
   const g = readGradedInPage();
 
-  check('the sent groups are the key', same(g.key, ['ABC', 'DEF', 'GHI', 'JKL']));
+  check('the sent groups are the key', same(g.key, ['MNO', 'PQR', 'STU', 'VWX']));
   check('the received groups are the attempt',
-        same(g.attempt, ['ABC', 'DE.', 'GXI', '...']));
+        same(g.attempt, ['MNO', 'PQ.', 'SXU', '...']));
   check('a character not copied stays a dot, which the grader reads as missed',
         g.attempt[1].endsWith('.'));
   check('LCWO\'s own error count per group comes too', same(g.reported, [0, 1, 1, 3]));
@@ -70,10 +70,10 @@ exports.run = function (check) {
         graded.wrongChars === g.errors && graded.totalChars === g.chars);
   check('and on every single group', graded.disagreements.length === 0);
   check('the misses land on the right characters',
-        same(graded.missCounts(), {F: 1, H: 1, J: 1, K: 1, L: 1}));
-  // H copied as X is a confusion; F and the JKL group were simply not copied
+        same(graded.missCounts(), {R: 1, T: 1, V: 1, W: 1, X: 1}));
+  // T copied as X is a confusion; R and the VWX group were simply not copied
   check('a substitution is a confusion, a dot is not',
-        same(graded.confusions(), {'H>X': 1}));
+        same(graded.confusions(), {'T>X': 1}));
 
   /* ---------- while an exercise is loaded ---------- */
   on(fixture('groups-exercise.html'));

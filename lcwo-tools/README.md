@@ -91,8 +91,45 @@ The port is in steps, each one usable on its own:
 4. **trouble and practice** in the popup, wired straight into the applier
    below, so the list never has to be copied anywhere. Done.
 5. **capture** - buttons on `/groups` that record a run, and picking up LCWO's
-   own grading when you submit.
+   own grading when you submit. Done.
 6. **export**, and a note in the popup of how long since the last one.
+
+## Recording, on the page
+
+A bar appears at the top of `lcwo.net/groups`:
+
+> **LCWO-TOOLS**  W7YFR · S2HW3 · session 2 · run 3   [ Record run ]  [ S2HW3 ▾ ]
+
+**Submitting is all you have to do.** When LCWO grades an attempt, the bar
+picks the result up and stores it — the sent groups, what you copied, LCWO's
+own error count per group, the speed it actually sent at, and how long it
+took. The session closes itself.
+
+**Record run** is for the attempts in between. LCWO settles the groups it
+will send when the page loads and keeps them in a hidden field, so the key is
+known before you have copied a note of it. That means you can play the clip,
+copy what you can, record it, replay and try again — every attempt a run
+against one key, and every one of them graded as it is recorded rather than
+waiting for the results table.
+
+The group select shows **where a run will actually land**, which is not
+always an assignment that exists yet. Close S4HW3 and the next run starts
+S5HW1 — the select says so, rather than naming some older group you left
+open.
+
+**Close S4HW3** finishes the assignment being recorded into: no more runs go
+there, and the next one starts the assignment after it. The work inside is
+untouched. To finish a different one, select it first — the button only ever
+closes the one named on it, so there is no list to mis-click.
+
+Assignments you have closed are listed under the open ones; picking one asks
+before reopening it, because closing meant something.
+
+Two things it deliberately does not do. It never records the results table
+sitting on an exercise page — that is the *previous* attempt, and filing it
+against this clip would be quietly wrong. And re-recording is impossible:
+every stored result carries a signature, so reloading the graded page or
+coming back to it later changes nothing.
 
 ## Your trouble letters, without the clipboard
 
@@ -178,7 +215,7 @@ that will not load.
 |---|---|
 | `src/core/` | grading, rollups, practice, timestamps. Pure functions, no storage and no DOM |
 | `src/report/` | `app.js` and `report.css`, shared with the CLI, plus `payload.js` which builds what app.js eats |
-| `src/data/` | `schema.js` the record shapes, `store.js` every query as logic over plain records, `idb.js` the IndexedDB plumbing, `analysis.js` the questions the pages ask |
+| `src/data/` | `schema.js` the record shapes, `store.js` every query as logic over plain records, `idb.js` the IndexedDB plumbing, `analysis.js` the questions the pages ask, `recorder.js` turning a page into rows |
 | `src/ext/` | the extension itself: `page.js`, `background.js`, `popup.js`, `popup.html` |
 | `test/` | the checks, and an in-memory backend to run them against |
 | `build.js` | run the checks, then zip for sharing |
@@ -210,6 +247,8 @@ Each module reads its dependencies through `require` under node and off
 | `src/ext/popup.html` | markup and styles |
 | `src/ext/data.html` `data.js` | import, export, and what is in the database |
 | `src/ext/report.html` `report.js` | the report page: build the payload, then hand it to app.js |
+| `src/ext/capture.js` | reads an exercise or a result off the LCWO page |
+| `src/ext/hud.js` `hud.css` | the bar on `/groups`; asks the worker to store things |
 | `src/ext/practice.html` `practice.js` | sending practice and confusion-pair drills |
 
 The split matters. `chrome.tabs.update` on the active tab dismisses the popup,

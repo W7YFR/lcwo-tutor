@@ -385,6 +385,55 @@ built from the live database (identical, bar Python spelling whole speeds as
 tell), and a pass in `test_report.py` that runs the whole fixture suite again
 with a JS-built payload handed in through `LCWO_DATA`.
 
+### The page cannot hold the database
+
+A content script's `indexedDB` is the *page's* — `lcwo.net`'s — not the
+extension's. Recording from the content script would have put every session
+you have ever copied inside LCWO's site storage, to be wiped whenever you
+cleared data for that site, and invisible to the report. So the bar on
+`/groups` only reads the DOM and messages the service worker, which runs in
+the extension's own origin and owns the database. A test asserts the page
+side never names `indexedDB` or the store, because this is the kind of rule
+that gets broken by someone reaching for the obvious shortcut.
+
+### A session is its key
+
+Pasting gave the key only at the end, in the results table, which is why runs
+were stored ungraded and graded retroactively. The browser gives it at the
+start: LCWO decides the groups when the page loads and keeps them in a hidden
+`text` field. So a session is *identified* by its key — copy the same clip
+again and that is another run, not another session — and every run grades the
+moment it is recorded.
+
+### The bar has to name the destination, not a plausible one
+
+Closing a group means that homework is done, so when the most recent one is
+closed the next run starts a *new* assignment rather than reopening it or
+falling back to whatever else is still open. That is right — dumping today's
+practice into an assignment left open a week ago would be worse.
+
+What was wrong was saying so. The select listed open groups and defaulted to
+the first, so with S4HW3 closed and a stale S2HW3 still open it displayed
+S2HW3 while recording would have created S5HW1. A control that names the
+wrong destination is worse than one that names none: you only find out after
+the data has gone somewhere else. `context` now reports the target
+explicitly, including the case where it does not exist yet, and the select
+follows it.
+
+### Recording twice is the failure worth designing against
+
+The results table stays on the page until it is replaced. It is there while
+you work on the next clip, and a reload serves it again. Two defences, because
+they cover different mistakes:
+
+- The bar picks a result up **only when the page has a result and no exercise
+  form**, which is the state submitting leaves you in. An exercise page also
+  carries a table — the previous attempt's — and recording that would file
+  last clip's work against this one.
+- Every stored result carries a **signature** of its sent groups, what was
+  copied and the error counts. Reloading the graded page, or coming back to it
+  an hour later, finds the signature already on file and stores nothing.
+
 ### Filling the box beats applying behind your back
 
 Changing the window refills the box immediately. The first version only

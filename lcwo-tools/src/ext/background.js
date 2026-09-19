@@ -13,7 +13,48 @@
  * failure mark that waits to be read.
  */
 
-importScripts('page.js');
+importScripts(
+  'page.js',
+  '../ns.js',
+  '../core/counter.js', '../core/clock.js', '../core/grade.js', '../core/assign.js',
+  '../core/rng.js', '../core/practice.js', '../core/rollup.js',
+  '../data/schema.js', '../data/store.js', '../data/idb.js', '../data/recorder.js');
+
+/*
+ * The database lives here, not in the content script.
+ *
+ * A content script's `indexedDB` is the page's - lcwo.net's - so recording
+ * from there would keep your practice inside their site data. The worker
+ * runs in the extension's own origin. It is also stopped when idle, so the
+ * connection is opened on demand and the promise kept for as long as this
+ * instance lives.
+ */
+let dbPromise = null;
+const database = () => (dbPromise || (dbPromise = LCWO.idb.open().catch(err => {
+  dbPromise = null;          // a failed open must not be remembered as one
+  throw err;
+})));
+
+const RECORDING = {
+  context: (db, msg) => LCWO.recorder.context(db, msg.page || {}),
+  'record-run': (db, msg) => LCWO.recorder.recordRun(db, msg.exercise),
+  'record-result': (db, msg) => LCWO.recorder.recordResult(db, msg.result),
+  'new-group': (db, msg) => LCWO.recorder.newGroup(db, msg.label),
+  'use-group': (db, msg) => LCWO.recorder.useGroup(db, msg.gid),
+  'close-group': (db, msg) => LCWO.recorder.closeGroup(db, msg.gid),
+  'reopen-group': (db, msg) => LCWO.recorder.reopenGroup(db, msg.gid),
+  suggest: db => LCWO.recorder.suggestLabel(db),
+};
+
+chrome.runtime.onMessage.addListener((msg, sender, respond) => {
+  if (!msg || msg.scope !== 'lcwo') return false;
+  const handler = RECORDING[msg.action];
+  if (!handler) return false;
+  database()
+    .then(db => handler(db, msg))
+    .then(respond, err => respond({ok: false, error: String((err && err.message) || err)}));
+  return true;   // answering later
+});
 
 const SETTINGS = 'https://lcwo.net/cwsettings';
 const LCWO_TABS = ['https://lcwo.net/*', 'https://www.lcwo.net/*'];

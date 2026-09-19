@@ -11,6 +11,7 @@
 const {parseChars, applyInPage, readInPage, planFor, pickLcwoTab, submitInPage,
        sameChars} = require('../src/ext/page.js');
 const POPUP_HTML = require('fs').readFileSync(__dirname + '/../src/ext/popup.html', 'utf8');
+const {same} = require('./harness.js');
 
 exports.run = function (check) {
 
@@ -214,7 +215,7 @@ exports.run = function (check) {
   check('the worker, not the popup, drives the round trip',
         /chrome\.tabs\.update/.test(BG) && !/chrome\.tabs\.update/.test(POPUP_JS));
   check('the worker loads the shared page functions',
-        /importScripts\('page\.js'\)/.test(BG));
+        /importScripts\([\s\S]*?'page\.js'/.test(BG));
   check('the popup asks the worker rather than doing it itself',
         /chrome\.runtime\.sendMessage/.test(POPUP_JS));
   check('the message listener keeps the channel open for its async reply',
@@ -365,6 +366,96 @@ exports.run = function (check) {
         writes.length === 2, writes.map(l => l.trim()).join(' | '));
   check('and the restore is classified afterwards, once there is a window',
         /box !== \(saved\.troubleChars/.test(POPUP_JS));
+
+  /* ---------- recording from the groups page ---------- */
+  const HUD_JS = read('hud.js');
+  const CAPTURE_JS = read('capture.js');
+  const HUD_CSS = read('hud.css');
+  const CS = (MANIFEST.content_scripts || [])[0];
+
+  check('a content script is registered for the groups page', !!CS);
+  check('on both spellings of LCWO, over https only',
+        same(CS.matches, ['https://lcwo.net/groups*', 'https://www.lcwo.net/groups*']));
+  check('every host it matches is one planFor treats as LCWO',
+        CS.matches.every(m => planFor(m.replace(/\*$/, '')).mode !== 'newtab'));
+  check('it loads the page readers before the bar that uses them',
+        CS.js.indexOf('src/ext/capture.js') === 0
+        && CS.js.indexOf('src/ext/hud.js') === 1);
+  const csMissing = CS.js.concat(CS.css || [])
+    .filter(f => !require('fs').existsSync(__dirname + '/../' + f));
+  check('and every file it names exists', !csMissing.length, csMissing.join(', '));
+
+  const codeOf = src => src
+    .replace(/\/\*[\s\S]*?\*\//g, '')                 // block comments
+    .split('\n').filter(l => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+
+  // A content script's indexedDB belongs to lcwo.net. Recording through it
+  // would put practice data inside their site storage, to be cleared with
+  // it - so the page side must only ever ask the worker.
+  check('the bar never touches a database itself',
+        !/indexedDB/.test(codeOf(HUD_JS))
+        && !/LCWO\.(store|idb|recorder)\b/.test(codeOf(HUD_JS)));
+  check('it goes through the worker instead',
+        /chrome\.runtime\.sendMessage/.test(HUD_JS));
+  check('and the worker is what opens the database',
+        /LCWO\.idb\.open/.test(BG) && /recorder/.test(BG));
+  check('the page readers stay free of chrome APIs, as injected code must',
+        !/chrome\./.test(codeOf(CAPTURE_JS)));
+
+  // every request the bar can make has to be one the worker answers
+  const sent = Array.from(HUD_JS.matchAll(/action: '([a-z-]+)'/g)).map(m => m[1]);
+  const handled = Array.from(BG.matchAll(/^\s{2}'?([a-z-]+)'?:/gm)).map(m => m[1]);
+  const unanswered = sent.filter(a => !handled.includes(a));
+  check('every action the bar sends is one the worker handles',
+        sent.length > 0 && !unanswered.length, unanswered.join(', '));
+  check('and they are scoped, so the apply flow is not confused with them',
+        /scope: 'lcwo'/.test(HUD_JS) && /msg\.scope !== 'lcwo'/.test(BG));
+  check('the worker answers asynchronously', /return true;/.test(BG));
+
+  // the modules the worker pulls in have to arrive in dependency order
+  const imported = (BG.match(/importScripts\(([\s\S]*?)\);/) || [, ''])[1]
+    .split(',').map(x => x.trim().replace(/^'|'$/g, '')).filter(Boolean);
+  check('the worker imports the namespace before the modules',
+        imported.indexOf('../ns.js') < imported.indexOf('../data/store.js'));
+  const bgOrder = [['../core/counter.js', '../core/grade.js'],
+                   ['../core/grade.js', '../core/rollup.js'],
+                   ['../data/schema.js', '../data/store.js'],
+                   ['../data/store.js', '../data/recorder.js'],
+                   ['../core/assign.js', '../data/recorder.js']];
+  const bgWrong = bgOrder.filter(([a, b]) =>
+    imported.indexOf(b) > -1 && (imported.indexOf(a) === -1 || imported.indexOf(a) > imported.indexOf(b)));
+  check('and each of them after what it reads', !bgWrong.length,
+        bgWrong.map(w => w.join(' before ')).join(', '));
+  const bgMissing = imported.filter(
+    f => !require('fs').existsSync(__dirname + '/../src/ext/' + f));
+  check('every module it imports exists', !bgMissing.length, bgMissing.join(', '));
+
+  // the bar lands in someone else's stylesheet
+  check('every rule in the bar\'s styles is namespaced',
+        HUD_CSS.split('}').map(b => b.split('{')[0].trim()).filter(Boolean)
+          .every(sel => /lcwo-tools/.test(sel)));
+  check('it pushes the page down rather than covering it',
+        /lcwo-tools-shifted/.test(HUD_CSS) && /lcwo-tools-shifted/.test(HUD_JS));
+  // recording last attempt's table against this clip would be silent and wrong
+  check('the bar only picks up a result when there is no exercise on the page',
+        /!state\.result \|\| state\.exercise/.test(HUD_JS));
+
+  // the selected option has to be where a run lands, not whatever happened to
+  // be first in the list
+  check('the group select follows the recorder\'s target',
+        /sel\.value = ctx\.target/.test(HUD_JS));
+  check('and offers a new assignment by name',
+        /'New: ' \+ \(ctx\.suggestion/.test(HUD_JS));
+  check('closed assignments are listed so they can be found',
+        /closedGroups/.test(HUD_JS) && /reopen:/.test(HUD_JS));
+  check('reopening one asks first, since closing meant something',
+        /window\.confirm\(/.test(HUD_JS));
+  check('an assignment can be finished from the bar',
+        /'close-group'/.test(HUD_JS) && /lt-close-group/.test(HUD_JS));
+  check('and only the one being recorded into, so none is closed by accident',
+        /Number\(els\.groups\.value\)/.test(HUD_JS));
+  check('the button names it rather than saying just "Close"',
+        /'Close ' \+ ctx\.target\.label/.test(HUD_JS));
 
   /* ---------- against real settings markup ---------- */
   //

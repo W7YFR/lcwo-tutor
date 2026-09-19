@@ -215,7 +215,10 @@
       group_id: grp.id, seq: seq, mode: mode, assignment: grp.assignment,
       char_wpm: charWpm, eff_wpm: effWpm,
       started_at: o.started_at || nowIso(), ended_at: null,
-      key: null, notes: o.notes || null, deleted_at: null,
+      // captured from the browser the key is known up front, which is what
+      // lets every run in the session grade as it is recorded
+      key: o.key ? o.key.slice() : null,
+      notes: o.notes || null, deleted_at: null,
     });
     // the group carries the latest settings forward as next session's default
     await updateGroup(db, grp.id, {mode: mode, char_wpm: charWpm, eff_wpm: effWpm});
@@ -232,9 +235,43 @@
       attempt: attempt.slice(),
       reported: o.reported == null ? null : o.reported.slice(),
       source: o.source || null,   // 'capture' | 'import' - how it got here
+      // identifies the graded result this run came from, so the same one
+      // cannot be stored twice when the page is reloaded
+      signature: o.signature || null,
+      // what you actually typed, before it was split into groups - the same
+      // evidence the CLI keeps, so a captured run is no thinner than a pasted one
+      raw_paste: o.raw_paste == null ? null : String(o.raw_paste),
       deleted_at: null,
     });
   }
+
+  /* The live session already carrying this key, if there is one.
+     A session is one clip, and the clip's groups are its identity: LCWO
+     settles them when the page loads, so an attempt at the same key is
+     another run rather than another session. */
+  async function openSessionForKey(db, key, oid) {
+    const want = (key || []).join(' ');
+    if (!want) return null;
+    const mine = new Set((await liveGroups(db, oid)).map(g => g.id));
+    const open = (await liveSessions(db)).filter(
+      s => mine.has(s.group_id) && !s.ended_at && (s.key || []).join(' ') === want);
+    return open.length ? open[open.length - 1] : null;
+  }
+
+  /* Has this exact graded result already been stored? The page keeps showing
+     a result until it is replaced, and a reload serves it again. */
+  async function runBySignature(db, signature) {
+    if (!signature) return null;
+    return (await liveRuns(db)).find(r => r.signature === signature) || null;
+  }
+
+  async function updateSession(db, sid, fields) {
+    const s = await db.get('sessions', Number(sid));
+    if (!s) throw new Error('no such session: ' + sid);
+    await db.put('sessions', Object.assign({}, s, fields));
+  }
+
+  const closeSession = (db, sid, at) => updateSession(db, sid, {ended_at: at || nowIso()});
 
   async function finishSession(db, sid, key, at) {
     const s = await db.get('sessions', Number(sid));
@@ -458,6 +495,7 @@
     createGroup, getGroup, getGroupAny, openGroups, lastGroup, updateGroup,
     closeGroup, reopenGroup,
     lastSettings, startSession, addRun, finishSession, groupSessions, sessionRuns,
+    openSessionForKey, runBySignature, updateSession, closeSession,
     binRecord, restoreRecord, trash, purge, pruneEmpty,
     loadGroup, loadAll, dump, load, summary, daysSinceExport,
     KINDS,
