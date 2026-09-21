@@ -1,0 +1,49 @@
+<!--
+  lcwo.net/groups with an exercise loaded, copied structurally from a live
+  DOM dump. The form is built by LCWO's JavaScript, so it does not appear in
+  the page source at all - only in the rendered page.
+
+  Two things here are the whole design:
+
+    * the hidden `text` field already holds the groups being sent, before you
+      submit. That is what makes a second attempt at the same clip a second
+      run against one key.
+
+    * the previous attempt's results table is still on the page. Capture has
+      to not mistake it for a new one.
+
+  A typed answer is a DOM property, never markup, so the textarea below is
+  empty exactly as a real dump would be; tests set `.value` themselves.
+-->
+<html><body>
+<h2>Code Groups (2  min)</h2>
+
+<p>Current parameters: Character Speed = <strong>25 WPM</strong>, Effective Speed = <strong>8 WPM</strong>, Tone =
+        <strong>500 Hz</strong>, Start delay (seconds) = 2 seconds — <a href="/cwsettings">Change</a></p>
+<div id="formatwarning">
+<b>Warning:</b> The number of groups sent was different from the text which you entered.</div>
+
+<table><tr><td valign="top">
+<p><strong>Result (25/8 WPM):</strong></p>
+<table><tr><th>Sent Group</th><th>Received Group</th><th colspan="2">Errors</th></tr><tr><td style="font-family:monospace">ABC</td><td style="font-family:monospace">ABC</td><td><span style="font-family:monospace;color:#00aa00;">A</span></td><td>0</td></tr></table>
+</td></tr></table>
+
+<form action="/groups" method="POST" id="eform">
+<table>
+<tbody><tr>
+<td><textarea id="textinput" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" name="input" cols="40" rows="10"></textarea></td>
+<td>
+<progress id="pb" value="0"></progress>
+<button type="button" title="Play / Pause"></button>
+<a title="Download MP3" href="https://cgi2.lcwo.net/cgi-bin/cw.mp3?d=001&amp;s=25&amp;e=8&amp;f=500&amp;t=|W0 mno pqr stu vwx">mp3</a>
+<input id="speed" type="range" min="5" max="50" step="1">
+<input id="eff" type="range" min="0" max="50" step="1">
+<input type="hidden" name="text" value="MNO PQR STU VWX">
+<input type="hidden" name="length" id="length" value="0">
+<input type="hidden" name="paris" id="paris" value="0">
+<input type="submit" value=" Check Result ">
+</td>
+</tr>
+</tbody></table>
+</form>
+</body></html>

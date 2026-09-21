@@ -18,6 +18,9 @@
 
   let bar = null;
   let els = {};
+  // typing changes whether there is anything to record, but every refresh is
+  // a round trip to the worker, so wait until the keys stop
+  let typing = null;
 
   function build() {
     if (bar) return bar;
@@ -159,10 +162,14 @@
     const ex = pageKey();
     if (!ex) return say('No exercise on this page.', 'bad');
     els.record.disabled = true;
+    clearTimeout(typing);
     const r = await ask({action: 'record-run', exercise: ex});
     if (!r || !r.ok) return refresh((r && r.error) || 'Could not record that.', 'bad');
+    // the attempt is stored, so the box starts empty for the replay
+    clearAttemptInPage();
     await refresh('Run ' + r.run + ' recorded'
-                  + (r.startedSession ? ', new session started.' : '.'), 'ok');
+                  + (r.startedSession ? ', new session started' : '')
+                  + ' — box cleared for the next copy.', 'ok');
   }
 
   /*
@@ -224,9 +231,6 @@
     await refresh(handled ? false : undefined);
   }
 
-  // typing changes whether there is anything to record, but every refresh is
-  // a round trip to the worker, so wait until the keys stop
-  let typing = null;
   document.addEventListener('input', event => {
     if (!bar || !event.target || event.target.id !== 'textinput') return;
     clearTimeout(typing);

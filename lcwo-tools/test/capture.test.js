@@ -19,7 +19,7 @@ const {same} = require('./harness.js');
 const {documentFrom} = require('./dom.js');
 const {gradeRun} = require('../src/core/grade.js');
 const {readExerciseInPage, readGradedInPage, readStateInPage,
-       signatureOf} = require('../src/ext/capture.js');
+       clearAttemptInPage, signatureOf} = require('../src/ext/capture.js');
 
 const FIXTURES = __dirname + '/fixtures/';
 const SAVED = __dirname + '/../../lcwo-html/';
@@ -96,6 +96,25 @@ exports.run = function (check) {
   check('the exercise page states the speed it will send at',
         e.charWpm === 25 && e.effWpm === 8);
   check('and how many groups are coming', e.groups === 4);
+
+  /* ---------- clearing out for the next copy ---------- */
+  //
+  // Recording a run stores what you typed, so leaving it on screen means the
+  // next attempt starts by deleting it.
+  on(fixture('groups-exercise.html'));
+  document.getElementById('textinput').value = 'mno pq. stu';
+  const cleared = clearAttemptInPage();
+  check('clearing reports what it removed',
+        cleared.ok && cleared.cleared === 'mno pq. stu');
+  check('the box is empty afterwards', readExerciseInPage().raw === '');
+  check('and reads as nothing typed', same(readExerciseInPage().attempt, []));
+  // the clip has not changed, so this is still the same session
+  check('the key is untouched, so it is still the same clip',
+        same(readExerciseInPage().key, ['MNO', 'PQR', 'STU', 'VWX']));
+  check('the cursor goes back to the box', document.getElementById('textinput').focused > 0);
+  check('clearing an empty box is harmless', clearAttemptInPage().ok);
+  on('<html><body><p>nothing</p></body></html>');
+  check('and with no exercise it says so', /no exercise/.test(clearAttemptInPage().error));
 
   /* ---------- what is on the page ---------- */
   on(fixture('groups-graded.html'));

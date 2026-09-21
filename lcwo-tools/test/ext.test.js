@@ -457,6 +457,17 @@ exports.run = function (check) {
   check('the button names it rather than saying just "Close"',
         /'Close ' \+ ctx\.target\.label/.test(HUD_JS));
 
+  // recording stores the attempt, so the box should start empty for the replay
+  check('recording a run clears the box',
+        /clearAttemptInPage\(\)/.test(HUD_JS));
+  check('but only once the run is safely stored',
+        HUD_JS.indexOf("if (!r || !r.ok) return refresh") <
+        HUD_JS.indexOf('clearAttemptInPage()'));
+  // a keystroke inside the debounce window would otherwise land afterwards
+  // and replace the outcome with "nothing typed yet"
+  check('and the pending refresh is cancelled so it cannot overwrite the result',
+        /clearTimeout\(typing\);\n\s*const r = await ask\(\{action: 'record-run'/.test(HUD_JS));
+
   /* ---------- against real settings markup ---------- */
   //
   // The shim above is hand-built and agrees with itself. This runs the same

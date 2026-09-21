@@ -17,6 +17,9 @@ exports/
 *.html
 # ...except the browser extension, which is source
 !lcwo-tools/src/ext/*.html
+# ...and the saved LCWO markup the tests parse. These are hand-written and
+# carry invented groups; the real captures in lcwo-html/ stay ignored.
+!lcwo-tools/test/fixtures/*.html
 
 # built extension zips - `make build` remakes them from source
 lcwo-tools/dist/

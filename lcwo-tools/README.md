@@ -105,7 +105,9 @@ picks the result up and stores it — the sent groups, what you copied, LCWO's
 own error count per group, the speed it actually sent at, and how long it
 took. The session closes itself.
 
-**Record run** is for the attempts in between. LCWO settles the groups it
+**Record run** empties the box and puts the cursor back in it, ready for the
+replay — what you typed is in the database, so leaving it on screen would
+just mean deleting it yourself. It is for the attempts in between. LCWO settles the groups it
 will send when the page loads and keeps them in a hidden field, so the key is
 known before you have copied a note of it. That means you can play the clip,
 copy what you can, record it, replay and try again — every attempt a run

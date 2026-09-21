@@ -1,0 +1,39 @@
+<!--
+  The shape of lcwo.net/groups after a submission, with invented groups - the same clip groups-exercise.html is sending,
+  so the pair reads as one session: typed there, submitted here.
+
+  Copied structurally from a real page - the nested layout tables, the span
+  colours, the wording of the summary - because the capture reads all of it.
+  The data is made up: a real capture carries a call sign and whatever else
+  LCWO puts in its page chrome, and none of that belongs in a repository.
+-->
+<html><body>
+<h1>LCWO.net</h1>
+<form action="/groups" method="POST">
+<table>
+<tr>
+<td>Change mode:</td>
+<td>
+<select onchange="this.form.submit();" name="mode" size="1">
+<option value="letters">letters</option><option value="figures">figures</option><option  value="custom" selected>Custom characters</option></select>
+</td>
+<td>&nbsp;Change duration (min):</td>
+<td>
+<select  onchange="this.form.submit();"  name="duration" size="1">
+<option>1</option><option selected>2</option><option>3</option></select>
+</td>
+<td>
+&nbsp;Use REAL speed (not PARIS): <input onchange="this.form.submit()" name="real" type="checkbox" value="real" >
+</td>
+</tr>
+</table>
+</form>
+
+<h2>Code Groups (2  min)</h2>
+
+<table><tr><td valign="top">
+<p><strong>Result (25/8 WPM):</strong></p>
+<table><tr><th>Sent Group</th><th>Received Group</th><th colspan="2">Errors</th></tr><tr><td style="font-family:monospace">MNO</td><td style="font-family:monospace">MNO</td><td><span style="font-family:monospace;color:#00aa00;">M</span><span style="font-family:monospace;color:#00aa00;">N</span><span style="font-family:monospace;color:#00aa00;">O</span></td><td>0</td></tr><tr><td style="font-family:monospace">PQR</td><td style="font-family:monospace">PQ.</td><td><span style="font-family:monospace;color:#00aa00;">P</span><span style="font-family:monospace;color:#00aa00;">Q</span><span style="font-family:monospace;color:#aa0000;text-decoration:underline;">R</span></td><td>1</td></tr><tr><td style="font-family:monospace">STU</td><td style="font-family:monospace">SXU</td><td><span style="font-family:monospace;color:#00aa00;">S</span><span style="font-family:monospace;color:#aa0000;text-decoration:underline;">T</span><span style="font-family:monospace;color:#00aa00;">U</span></td><td>1</td></tr><tr><td style="font-family:monospace">VWX</td><td style="font-family:monospace">...</td><td><span style="font-family:monospace;color:#aa0000;text-decoration:underline;">V</span><span style="font-family:monospace;color:#aa0000;text-decoration:underline;">W</span><span style="font-family:monospace;color:#aa0000;text-decoration:underline;">X</span></td><td>3</td></tr></table>
+</td><td>&nbsp;&nbsp;</td><td valign="top">
+<p>Groups: 4 (12 characters), Errors: 5 = 41.7%</p><p>Real speed: 12 characters / 30.0 seconds = 4.8 WPM / 24 cpm</p><p>PARIS: 8 WPM</p><p><a href='http://en.wikipedia.org/wiki/Levenshtein_distance'>Levenshtein</a>-Errors: 5 = 41.7 %</p><p><a href="/groups" id="newattempt">Continue Training</a></p></td></tr></table>
+</body></html>

@@ -59,6 +59,23 @@ function readExerciseInPage() {
   };
 }
 
+/*
+ * Empty the box, ready for the next copy of the same clip.
+ *
+ * Called after a run is recorded: what you typed is stored, and leaving it
+ * on screen means the next attempt starts by deleting it. The key is
+ * untouched, so this is still the same session.
+ */
+function clearAttemptInPage() {
+  const form = document.getElementById('eform');
+  const typed = form && form.querySelector('[name=input]');
+  if (!typed) return {error: 'no exercise on this page'};
+  const had = String(typed.value || '');
+  typed.value = '';
+  if (typed.focus) typed.focus();
+  return {ok: true, cleared: had};
+}
+
 /* ---------- after submitting ---------- */
 
 function readGradedInPage() {
@@ -137,5 +154,6 @@ function readStateInPage() {
 }
 
 if (typeof module === 'object') {
-  module.exports = {readExerciseInPage, readGradedInPage, readStateInPage, signatureOf};
+  module.exports = {readExerciseInPage, readGradedInPage, readStateInPage,
+                    clearAttemptInPage, signatureOf};
 }

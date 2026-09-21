@@ -87,6 +87,9 @@ class El {
     else delete this.attrs.checked;
   }
 
+  set value(v) { this.attrs.value = String(v); }
+  focus() { this.focused = (this.focused || 0) + 1; }
+
   dispatchEvent(event) {
     (this.events || (this.events = [])).push(event.type);
     return true;
