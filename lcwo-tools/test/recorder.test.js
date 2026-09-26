@@ -185,11 +185,13 @@ exports.run = async function (check) {
     check('before anything, there is an operator and no session',
           ctx.operator.callsign === 'W0TST' && ctx.session === null);
     check('and the next run would be the first', ctx.nextRun === 1);
+    check('in the first session of the group', ctx.nextSession === 1);
 
     await recorder.recordRun(db, exercise(['MNO']));
     ctx = await recorder.context(db, {key: KEY});
     check('once recording has started the session shows', !!ctx.session);
     check('with the run count', ctx.runs === 1 && ctx.nextRun === 2);
+    check('and its number in the group', ctx.session.seq === 1 && ctx.nextSession === 1);
     check('and the group it is in', ctx.group.label === 'S1HW1');
     check('open groups are offered for switching', ctx.openGroups.length === 1);
 
@@ -199,6 +201,15 @@ exports.run = async function (check) {
           ctx.session === null && ctx.nextRun === 1);
     check('but the group is still where recording would go',
           ctx.group.label === 'S1HW1');
+    check('and the next clip would be its second session', ctx.nextSession === 2);
+
+    // the graded page still names the finished session until the next clip
+    const graded = await recorder.context(db, {key: KEY, finished: true});
+    check('a graded page keeps its session', graded.session && graded.session.seq === 1
+          && graded.nextSession === 1);
+    check('and names the final run rather than a next one',
+          graded.runs === 2 && graded.run === 2);
+    check('an exercise page names the run about to be recorded', ctx.run === 1);
 
     // a page with no exercise on it still describes where you are
     const bare = await recorder.context(db, {});

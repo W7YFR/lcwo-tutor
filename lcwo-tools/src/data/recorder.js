@@ -83,11 +83,19 @@
 
   /* ---------- what the page can ask for ---------- */
 
-  /* Enough to draw the bar on the page: who, where, and how far in. */
+  /*
+   * Enough to draw the bar on the page: who, where, and how far in.
+   *
+   * A graded page (`page.finished`) still describes the session it graded,
+   * so the bar moves on only when the next exercise loads.
+   */
   async function context(db, page) {
     const op = await store.currentOperator(db);
     const key = (page && page.key) || null;
-    const session = key && op ? await store.openSessionForKey(db, key, op.id) : null;
+    const finished = !!(page && page.finished);
+    const session = !key || !op ? null
+      : finished ? await store.lastSessionForKey(db, key, op.id)
+      : await store.openSessionForKey(db, key, op.id);
     const group = session ? await store.getGroup(db, session.group_id)
       : (op ? await currentGroup(db, op.id) : null);
     const runs = session ? (await store.sessionRuns(db, session.id)).length : 0;
@@ -105,8 +113,13 @@
       openGroups: all.filter(g => !g.closed_at).map(brief),
       closedGroups: all.filter(g => g.closed_at).map(brief).reverse(),
       session: session ? {id: session.id, seq: session.seq} : null,
+      // the number the next session in this group would get
+      nextSession: session ? session.seq
+        : group ? await store.nextSessionSeq(db, group.id) : 1,
       runs: runs,
       nextRun: runs + 1,
+      // the run the bar names: the last one once graded, else the next one
+      run: finished && session ? runs : runs + 1,
     };
   }
 

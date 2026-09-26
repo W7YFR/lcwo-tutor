@@ -205,9 +205,13 @@
   const nextSeq = (rows, field, id) =>
     rows.filter(r => r[field] === id).reduce((n, r) => Math.max(n, r.seq || 0), 0) + 1;
 
+  /* Binned sessions keep their number, so a restore never collides. */
+  const nextSessionSeq = async (db, gid) =>
+    nextSeq(await db.all('sessions'), 'group_id', Number(gid));
+
   async function startSession(db, grp, opts) {
     const o = opts || {};
-    const seq = nextSeq(await db.all('sessions'), 'group_id', grp.id);
+    const seq = await nextSessionSeq(db, grp.id);
     const mode = o.mode || grp.mode;
     const charWpm = o.char_wpm === undefined ? grp.char_wpm : o.char_wpm;
     const effWpm = o.eff_wpm === undefined ? grp.eff_wpm : o.eff_wpm;
@@ -250,12 +254,23 @@
      settles them when the page loads, so an attempt at the same key is
      another run rather than another session. */
   async function openSessionForKey(db, key, oid) {
-    const want = (key || []).join(' ');
-    if (!want) return null;
-    const mine = new Set((await liveGroups(db, oid)).map(g => g.id));
-    const open = (await liveSessions(db)).filter(
-      s => mine.has(s.group_id) && !s.ended_at && (s.key || []).join(' ') === want);
+    const open = (await sessionsForKey(db, key, oid)).filter(s => !s.ended_at);
     return open.length ? open[open.length - 1] : null;
+  }
+
+  /* The latest session with this key, finished or not: what a graded page
+     is showing the result of. */
+  async function lastSessionForKey(db, key, oid) {
+    const all = await sessionsForKey(db, key, oid);
+    return all.length ? all[all.length - 1] : null;
+  }
+
+  async function sessionsForKey(db, key, oid) {
+    const want = (key || []).join(' ');
+    if (!want) return [];
+    const mine = new Set((await liveGroups(db, oid)).map(g => g.id));
+    return (await liveSessions(db)).filter(
+      s => mine.has(s.group_id) && (s.key || []).join(' ') === want);
   }
 
   /* Has this exact graded result already been stored? The page keeps showing
@@ -490,7 +505,7 @@
   Object.assign(X, {
     getSetting, setSetting,
     createOperator, listOperators, getOperator, findOperator, opLabel,
-    currentOperator, setCurrentOperator, adoptUnassigned, operatorCounts,
+    nextSessionSeq, lastSessionForKey, currentOperator, setCurrentOperator, adoptUnassigned, operatorCounts,
     liveGroups, liveSessions, liveRuns,
     createGroup, getGroup, getGroupAny, openGroups, lastGroup, updateGroup,
     closeGroup, reopenGroup,

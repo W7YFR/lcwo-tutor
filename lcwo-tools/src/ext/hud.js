@@ -71,9 +71,9 @@
     const bits = ['<b>' + esc(ctx.operator.callsign) + '</b>'];
     if (ctx.group) bits.push('<b>' + esc(ctx.group.label) + '</b>');
 
-    if (!ctx.group && ctx.target) bits.push('<b>' + esc(ctx.target.label) + '</b> (new)');
-    bits.push(ctx.session ? 'session ' + ctx.session.seq : 'new session');
-    bits.push('run ' + ctx.nextRun);
+    if (!ctx.group && ctx.target) bits.push('<b>' + esc(ctx.target.label) + '</b>');
+    bits.push('session ' + ctx.nextSession);
+    bits.push('run ' + ctx.run);
     els.where.innerHTML = bits.join('<span class="lt-sep">·</span>');
   }
 
@@ -125,9 +125,16 @@
     return ex.error ? null : ex;
   };
 
+  /* What to ask the worker about: the clip on screen, or the one just graded. */
+  function pageContext(ex) {
+    if (ex) return {key: ex.key};
+    const graded = readGradedInPage();
+    return graded.error ? {} : {key: graded.key, finished: true};
+  }
+
   async function refresh(message, kind) {
     const ex = pageKey();
-    const ctx = await ask({action: 'context', page: ex ? {key: ex.key} : {}});
+    const ctx = await ask({action: 'context', page: pageContext(ex)});
     if (!ctx) return;
     drawWhere(ctx);
     drawGroups(ctx);

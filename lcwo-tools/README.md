@@ -106,6 +106,12 @@ A bar appears at the top of `lcwo.net/groups`:
 
 > **LCWO-TOOLS**  W7YFR · S2HW3 · session 2 · run 3   [ Record run ]  [ S2HW3 ▾ ]
 
+The session number counts within the assignment. Before the first run on a
+clip, the bar shows the number that clip will get. The run number is the run
+you are about to record, and it moves on only when you record one. On the
+graded page the bar still shows the finished session and its final run. It
+moves to the next session when **Continue Training** loads the next exercise.
+
 **Submitting is all you have to do.** When LCWO grades an attempt, the bar
 picks the result up and stores it — the sent groups, what you copied, LCWO's
 own error count per group, the speed it actually sent at, and how long it
