@@ -42,6 +42,8 @@ body.lcwo-tools-shifted { padding-top: 46px !important; }
 #lcwo-tools-bar button.lt-primary {
   background: #1aa9ff; border-color: #1aa9ff; color: #041a28; font-weight: 600;
 }
+#lcwo-tools-bar button.lt-data { border-color: #f0736a; }
+#lcwo-tools-bar .lt-data[hidden] { display: none; }
 #lcwo-tools-bar .lt-close {
   background: none; border: none; color: #6b7280; font-size: 15px; padding: 0 4px;
 }

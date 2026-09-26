@@ -33,6 +33,7 @@
       '<select class="lt-groups"></select>' +
       '<button type="button" class="lt-close-group"></button>' +
       '<span class="lt-status"></span>' +
+      '<button type="button" class="lt-data" hidden>Open the data page</button>' +
       '<button type="button" class="lt-close" title="Hide until the next page load">&times;</button>';
     document.body.appendChild(bar);
     document.body.classList.add('lcwo-tools-shifted');
@@ -43,11 +44,13 @@
       groups: bar.querySelector('.lt-groups'),
       closeGroup: bar.querySelector('.lt-close-group'),
       status: bar.querySelector('.lt-status'),
+      data: bar.querySelector('.lt-data'),
       close: bar.querySelector('.lt-close'),
     };
     els.record.addEventListener('click', recordRun);
     els.groups.addEventListener('change', switchGroup);
     els.closeGroup.addEventListener('click', finishGroup);
+    els.data.addEventListener('click', () => ask({action: 'open-data'}));
     els.close.addEventListener('click', () => {
       bar.classList.add('is-hidden');
       document.body.classList.remove('lcwo-tools-shifted');
@@ -98,7 +101,12 @@
       const open = group('Open');
       for (const g of ctx.openGroups) add(open, String(g.id), g.label);
     }
-    add(sel, 'new', 'New: ' + (ctx.suggestion || 'assignment') + '…');
+    // the automatic choice gets its own entry, so picking "New" to name one
+    // is always a change and always asks
+    if (ctx.target && ctx.target.kind === 'new') {
+      add(sel, 'auto', ctx.target.label + ' (next)');
+    }
+    add(sel, 'new', 'New assignment…');
     // closed ones are listed so you can see where your last homework went,
     // and reopen it on purpose rather than by accident
     if ((ctx.closedGroups || []).length) {
@@ -107,7 +115,7 @@
     }
 
     sel.value = ctx.target && ctx.target.kind === 'group'
-      ? String(ctx.target.id) : 'new';
+      ? String(ctx.target.id) : 'auto';
   }
 
   /* ---------- what the page currently is ---------- */
@@ -124,6 +132,7 @@
     drawWhere(ctx);
     drawGroups(ctx);
     els.record.disabled = !ex || !ex.attempt.length || !ctx.operator;
+    els.data.hidden = !!ctx.operator;
     // only an assignment that exists can be finished
     const open = ctx.target && ctx.target.kind === 'group';
     els.closeGroup.disabled = !open;
@@ -133,7 +142,7 @@
       : 'Nothing to close: the next run starts a new assignment';
     if (typeof message === 'string') say(message, kind);
     else if (message === false) { /* leave what is on screen */ }
-    else if (!ctx.operator) say('Add an operator on the extension\'s data page first.', 'bad');
+    else if (!ctx.operator) say('Add or choose an operator on the data page first.', 'bad');
     else if (!ex) say('No exercise loaded — press Continue Training.');
     else if (!ex.attempt.length) say('Nothing typed yet.');
     else say(ex.attempt.length + ' of ' + ex.key.length + ' groups typed.');
@@ -196,6 +205,7 @@
 
   async function switchGroup() {
     const value = els.groups.value;
+    if (value === 'auto') return refresh();
     if (value.startsWith('reopen:')) {
       const gid = Number(value.slice(7));
       const label = els.groups.selectedOptions[0].textContent;
@@ -230,6 +240,11 @@
     const handled = await pickUpResult(state);
     await refresh(handled ? false : undefined);
   }
+
+  // the operator is chosen on the data page, in another tab
+  document.addEventListener('visibilitychange', () => {
+    if (bar && document.visibilityState === 'visible') refresh().catch(() => {});
+  });
 
   document.addEventListener('input', event => {
     if (!bar || !event.target || event.target.id !== 'textinput') return;

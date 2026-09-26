@@ -44,6 +44,8 @@ const RECORDING = {
   'close-group': (db, msg) => LCWO.recorder.closeGroup(db, msg.gid),
   'reopen-group': (db, msg) => LCWO.recorder.reopenGroup(db, msg.gid),
   suggest: db => LCWO.recorder.suggestLabel(db),
+  // a content script cannot open extension pages itself
+  'open-data': () => chrome.runtime.openOptionsPage().then(() => ({ok: true})),
 };
 
 chrome.runtime.onMessage.addListener((msg, sender, respond) => {

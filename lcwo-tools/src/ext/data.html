@@ -34,6 +34,13 @@
   button.primary { background: var(--accent); border-color: var(--accent);
                    color: var(--on-accent); }
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  input[type=text], select { font: inherit; padding: 6px 9px; border-radius: 9px;
+                              border: 1px solid var(--line); background: var(--panel);
+                              color: var(--ink); }
+  input[type=text] { width: 11em; }
+  label.field { display: flex; flex-direction: column; gap: 3px; color: var(--muted);
+                font-size: 11.5px; }
+  form.row { align-items: flex-end; margin-top: 12px; }
   input[type=file] { font: inherit; font-size: 12.5px; color: var(--muted); max-width: 100%; }
   .note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
   #status { margin: 12px 0 0; font-size: 12.5px; min-height: 1.5em; color: var(--muted); }
@@ -58,6 +65,25 @@
     <div><dt>Days</dt><dd id="n-days">–</dd></div>
   </dl>
   <p class="meta" id="span"></p>
+</section>
+
+<section>
+  <h2>Operators</h2>
+  <div class="row" id="current-row" hidden>
+    <label class="field">Recording as
+      <select id="current"></select>
+    </label>
+  </div>
+  <p class="note" id="no-ops" hidden>No operator yet. Add yourself to start recording.</p>
+  <form class="row" id="add-op">
+    <label class="field">Name <input type="text" id="op-name" autocomplete="name" required></label>
+    <label class="field">Call sign <input type="text" id="op-call" required
+      autocapitalize="characters" spellcheck="false"></label>
+    <button type="submit">Add operator</button>
+  </form>
+  <p class="note">
+    The bar on lcwo.net records runs for the operator chosen here.
+  </p>
 </section>
 
 <section>

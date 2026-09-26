@@ -311,6 +311,16 @@ exports.run = function (check) {
   check('the manifest offers the data page as the options page',
         MANIFEST.options_page === 'src/ext/data.html');
 
+  /* ---------- operators, on the data page ---------- */
+  const DATA_HTML = PAGES['data.html'];
+  const DATA_JS = read('data.js');
+  check('the data page can add an operator',
+        /<form[^>]*id="add-op"/.test(DATA_HTML) && /store\.createOperator\(/.test(DATA_JS));
+  check('and choose who is recording',
+        /<select id="current">/.test(DATA_HTML) && /store\.setCurrentOperator\(/.test(DATA_JS));
+  check('the first operator takes the groups imported without one',
+        /ops\.length === 1\)[\s\S]{0,160}adoptUnassigned/.test(DATA_JS));
+
   /* ---------- trouble letters, straight into the box ---------- */
   //
   // The whole point of the port: the list used to come off the clipboard.
@@ -445,7 +455,13 @@ exports.run = function (check) {
   check('the group select follows the recorder\'s target',
         /sel\.value = ctx\.target/.test(HUD_JS));
   check('and offers a new assignment by name',
-        /'New: ' \+ \(ctx\.suggestion/.test(HUD_JS));
+        /add\(sel, 'new', 'New assignment…'\)/.test(HUD_JS)
+        && /window\.prompt\('Name for the new assignment'/.test(HUD_JS));
+  // "New" selected by default fires no change event, so it could never ask
+  check('the automatic next assignment is its own entry, not "New"',
+        /add\(sel, 'auto'/.test(HUD_JS) && /: 'auto';/.test(HUD_JS));
+  check('with no operator the bar opens the data page',
+        /action: 'open-data'/.test(HUD_JS) && /openOptionsPage/.test(BG));
   check('closed assignments are listed so they can be found',
         /closedGroups/.test(HUD_JS) && /reopen:/.test(HUD_JS));
   check('reopening one asks first, since closing meant something',

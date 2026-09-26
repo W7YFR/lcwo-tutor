@@ -96,6 +96,12 @@ The port is in steps, each one usable on its own:
 
 ## Recording, on the page
 
+Recording needs an operator. Add yourself under **Operators** on the data
+page. With one operator on file, the bar records as that operator. With
+several, pick one in **Recording as**. The first operator you add also takes
+any imported groups that have no operator. Until there is an operator, the bar
+shows an **Open the data page** button.
+
 A bar appears at the top of `lcwo.net/groups`:
 
 > **LCWO-TOOLS**  W7YFR · S2HW3 · session 2 · run 3   [ Record run ]  [ S2HW3 ▾ ]
@@ -118,6 +124,10 @@ The group select shows **where a run will actually land**, which is not
 always an assignment that exists yet. Close S4HW3 and the next run starts
 S5HW1 — the select says so, rather than naming some older group you left
 open.
+
+The bar picks the assignment for you: the one you last worked on if it is
+still open, else the next number. To override it, pick another open
+assignment, or pick **New assignment…** and type a name.
 
 **Close S4HW3** finishes the assignment being recorded into: no more runs go
 there, and the next one starts the assignment after it. The work inside is
