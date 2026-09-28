@@ -140,13 +140,14 @@
     drawGroups(ctx);
     els.record.disabled = !ex || !ex.attempt.length || !ctx.operator;
     els.data.hidden = !!ctx.operator;
-    // only an assignment that exists can be finished
+    // only an assignment that exists and is open can be finished
     const open = ctx.target && ctx.target.kind === 'group';
-    els.closeGroup.disabled = !open;
-    els.closeGroup.textContent = open ? 'Close ' + ctx.target.label : 'Close';
-    els.closeGroup.title = open
-      ? 'Finish ' + ctx.target.label + ' — later runs start the next assignment'
-      : 'Nothing to close: the next run starts a new assignment';
+    els.closeGroup.hidden = !open;
+    if (open) {
+      els.closeGroup.textContent = 'Close ' + ctx.target.label;
+      els.closeGroup.title = 'Finish ' + ctx.target.label
+        + ' — later runs start the next assignment';
+    }
     if (typeof message === 'string') say(message, kind);
     else if (message === false) { /* leave what is on screen */ }
     else if (!ctx.operator) say('Add or choose an operator on the data page first.', 'bad');
@@ -161,7 +162,7 @@
    *
    * Only ever the one being recorded into, so there is no list of things to
    * close by accident - to finish a different one, select it first. No
-   * confirmation: reopening it is one press away, in the same control.
+   * confirmation: the Closed entries in the select reopen it.
    */
   async function finishGroup() {
     const gid = Number(els.groups.value);

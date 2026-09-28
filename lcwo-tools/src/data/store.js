@@ -254,7 +254,10 @@
      settles them when the page loads, so an attempt at the same key is
      another run rather than another session. */
   async function openSessionForKey(db, key, oid) {
-    const open = (await sessionsForKey(db, key, oid)).filter(s => !s.ended_at);
+    // a closed group takes no more runs, so its sessions are not open either
+    const closed = new Set((await liveGroups(db, oid)).filter(g => g.closed_at).map(g => g.id));
+    const open = (await sessionsForKey(db, key, oid))
+      .filter(s => !s.ended_at && !closed.has(s.group_id));
     return open.length ? open[open.length - 1] : null;
   }
 

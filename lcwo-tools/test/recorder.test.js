@@ -297,6 +297,17 @@ exports.run = async function (check) {
     check('it shows up under the closed ones',
           same(ctx.closedGroups.map(g => g.label), ['S1HW1']));
 
+    // the clip on screen started in S1HW1, but a closed group takes no runs
+    const onPage = await recorder.context(db, {key: KEY});
+    check('its open session is no longer where a run lands',
+          onPage.session === null && onPage.target.kind === 'new');
+    check('the graded page of that clip targets a new assignment too',
+          (await recorder.context(db, {key: KEY, finished: true})).target.kind === 'new');
+    await recorder.reopenGroup(db, gid);
+    check('reopening it brings the session on screen back',
+          (await recorder.context(db, {key: KEY})).session !== null);
+    await recorder.closeGroup(db, gid);
+
     // the setting pointed at it, and a stale pointer would resolve through a
     // closed group on every later run
     check('nothing is left pointing at it',

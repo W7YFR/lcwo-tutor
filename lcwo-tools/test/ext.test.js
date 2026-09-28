@@ -472,6 +472,8 @@ exports.run = function (check) {
         /Number\(els\.groups\.value\)/.test(HUD_JS));
   check('the button names it rather than saying just "Close"',
         /'Close ' \+ ctx\.target\.label/.test(HUD_JS));
+  check('and hides once there is nothing open to close',
+        /els\.closeGroup\.hidden = !open;/.test(HUD_JS));
 
   // recording stores the attempt, so the box should start empty for the replay
   check('recording a run clears the box',

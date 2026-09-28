@@ -138,7 +138,9 @@ assignment, or pick **New assignment…** and type a name.
 **Close S4HW3** finishes the assignment being recorded into: no more runs go
 there, and the next one starts the assignment after it. The work inside is
 untouched. To finish a different one, select it first — the button only ever
-closes the one named on it, so there is no list to mis-click.
+closes the one named on it, so there is no list to mis-click. After you close
+it, the button goes away. A clip you started in S4HW3 no longer
+records there: the next run starts a session in the next assignment.
 
 Assignments you have closed are listed under the open ones; picking one asks
 before reopening it, because closing meant something.

@@ -102,20 +102,21 @@
     const all = op ? await store.liveGroups(db, op.id) : [];
     const name = g => g.label || g.assignment;
     const brief = g => ({id: g.id, label: name(g)});
+    const open = group && !group.closed_at ? group : null;
     return {
       operator: op ? {id: op.id, callsign: op.callsign, name: op.name} : null,
       group: group ? {id: group.id, label: name(group), closed: !!group.closed_at} : null,
       // what a run would land in, which is a group that does not exist yet
       // when everything on file has been closed
-      target: group ? {kind: 'group', id: group.id, label: name(group)}
-                    : {kind: 'new', label: await suggestLabel(db)},
+      target: open ? {kind: 'group', id: open.id, label: name(open)}
+                   : {kind: 'new', label: await suggestLabel(db)},
       suggestion: await suggestLabel(db),
       openGroups: all.filter(g => !g.closed_at).map(brief),
       closedGroups: all.filter(g => g.closed_at).map(brief).reverse(),
       session: session ? {id: session.id, seq: session.seq} : null,
       // the number the next session in this group would get
       nextSession: session ? session.seq
-        : group ? await store.nextSessionSeq(db, group.id) : 1,
+        : open ? await store.nextSessionSeq(db, open.id) : 1,
       runs: runs,
       nextRun: runs + 1,
       // the run the bar names: the last one once graded, else the next one
