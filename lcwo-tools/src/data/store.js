@@ -452,6 +452,10 @@
    *
    * A file from a newer version is refused rather than half-read: the failure
    * mode of guessing is a database that looks fine and grades wrong.
+   *
+   * The file's own `exported_at` setting is one export behind, because the
+   * export saves the date after it reads the settings. The top-level stamp is
+   * when this data was last written to disk, so it wins.
    */
   async function load(db, data) {
     if (!data || data.format !== schema.EXPORT_FORMAT) throw new Error('not an lcwo export');
@@ -469,7 +473,10 @@
       for (const rec of rows) await db.put(store, rec);
       counts[store] = rows.length;
     }
-    if (data.exported_at) await setSetting(db, 'imported_from', data.exported_at);
+    if (data.exported_at) {
+      await setSetting(db, 'imported_from', data.exported_at);
+      await setSetting(db, 'exported_at', data.exported_at);
+    }
     return counts;
   }
 

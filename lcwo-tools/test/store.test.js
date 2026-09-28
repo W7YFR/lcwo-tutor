@@ -362,6 +362,15 @@ exports.run = async function (check) {
     check('importing the same export twice is not two databases',
           (await fresh.all('runs')).length === 2 && (await fresh.all('groups')).length === 1);
 
+    /* The export saves its date after it reads the settings, so a file
+       carries the date of the export before it. */
+    const behind = JSON.parse(JSON.stringify(out));
+    behind.exported_at = '2026-09-28T08:45:53-07:00';
+    behind.records.settings.push({key: 'exported_at', value: '2026-09-25T20:19:11-07:00'});
+    await store.load(fresh, behind);
+    check('import takes the export date from the file, not its stale setting',
+          await store.getSetting(fresh, 'exported_at') === '2026-09-28T08:45:53-07:00');
+
     check('and something that is not an export is refused',
           await store.load(fresh, {format: 'nope'}).then(() => false, () => true));
     check('as is nothing at all',
@@ -454,9 +463,8 @@ exports.run = async function (check) {
     check('with the span of them',
           sum.firstDay === '2026-09-11' && sum.lastDay === '2026-09-11');
     check('the bin is counted separately', sum.binned === 1);
-    check('nothing has been exported from here yet', sum.exportedAt === null);
-    check('and there is no age to show for that',
-          store.daysSinceExport(sum) === null);
+    check('the file it came from counts as the last export',
+          sum.exportedAt === '2026-09-17T20:28:51-07:00');
 
     await store.setSetting(db, 'exported_at', '2026-09-15T08:00:00-07:00');
     const sum2 = await store.summary(db);
@@ -473,5 +481,8 @@ exports.run = async function (check) {
     check('an empty database summarizes as empty',
           none.groups === 0 && none.runs === 0 && none.days === 0
           && none.firstDay === null && none.lastDay === null);
+    check('nothing has been exported from it yet', none.exportedAt === null);
+    check('and there is no age to show for that',
+          store.daysSinceExport(none) === null);
   }
 };
