@@ -21,6 +21,8 @@
   // typing changes whether there is anything to record, but every refresh is
   // a round trip to the worker, so wait until the keys stop
   let typing = null;
+  // the session a graded page describes, for the stats button
+  let shown = null;
 
   function build() {
     if (bar) return bar;
@@ -32,6 +34,7 @@
       '<button type="button" class="lt-record lt-primary">Record run</button>' +
       '<select class="lt-groups"></select>' +
       '<button type="button" class="lt-close-group"></button>' +
+      '<button type="button" class="lt-stats" hidden>Session stats</button>' +
       '<span class="lt-status"></span>' +
       '<button type="button" class="lt-data" hidden>Open the data page</button>' +
       '<button type="button" class="lt-close" title="Hide until the next page load">&times;</button>';
@@ -43,6 +46,7 @@
       record: bar.querySelector('.lt-record'),
       groups: bar.querySelector('.lt-groups'),
       closeGroup: bar.querySelector('.lt-close-group'),
+      stats: bar.querySelector('.lt-stats'),
       status: bar.querySelector('.lt-status'),
       data: bar.querySelector('.lt-data'),
       close: bar.querySelector('.lt-close'),
@@ -50,6 +54,9 @@
     els.record.addEventListener('click', recordRun);
     els.groups.addEventListener('change', switchGroup);
     els.closeGroup.addEventListener('click', finishGroup);
+    els.stats.addEventListener('click', () => {
+      if (shown) ask({action: 'open-report', sid: shown.sid, gid: shown.gid});
+    });
     els.data.addEventListener('click', () => ask({action: 'open-data'}));
     els.close.addEventListener('click', () => {
       bar.classList.add('is-hidden');
@@ -140,6 +147,10 @@
     drawGroups(ctx);
     els.record.disabled = !ex || !ex.attempt.length || !ctx.operator;
     els.data.hidden = !!ctx.operator;
+    // a graded page has a finished session whose stats are worth a look
+    shown = !ex && ctx.session && ctx.group
+      ? {sid: ctx.session.id, gid: ctx.group.id} : null;
+    els.stats.hidden = !shown;
     // only an assignment that exists and is open can be finished
     const open = ctx.target && ctx.target.kind === 'group';
     els.closeGroup.hidden = !open;
@@ -208,6 +219,9 @@
     if (r.skipped) { say('Already recorded — ' + graded.key.length + ' groups.'); return true; }
     say('Recorded: ' + graded.key.length + ' groups, ' + graded.errors + ' errors at '
         + graded.charWpm + '/' + graded.effWpm + ' wpm. Session closed.', 'ok');
+    // the session just closed, so show how it went - only for a fresh result,
+    // not every time the graded page is reloaded
+    ask({action: 'open-report', sid: r.sessionId, gid: r.groupId});
     return true;
   }
 

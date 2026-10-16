@@ -46,6 +46,7 @@ const RECORDING = {
   suggest: db => LCWO.recorder.suggestLabel(db),
   // a content script cannot open extension pages itself
   'open-data': () => chrome.runtime.openOptionsPage().then(() => ({ok: true})),
+  'open-report': (db, msg, sender) => openReport(msg, sender),
 };
 
 chrome.runtime.onMessage.addListener((msg, sender, respond) => {
@@ -53,7 +54,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
   const handler = RECORDING[msg.action];
   if (!handler) return false;
   database()
-    .then(db => handler(db, msg))
+    .then(db => handler(db, msg, sender))
     .then(respond, err => respond({ok: false, error: String((err && err.message) || err)}));
   return true;   // answering later
 });
@@ -132,6 +133,24 @@ async function applyFlow({tabId, windowId, url, chars, replace}) {
   await chrome.tabs.update(target, {url: plan.back});
   return {ok: true, message: `${tally(r, chars)}. Saved, `
           + `${plan.mode === 'newtab' ? 'now on' : 'and back to'} ${plan.from}.`};
+}
+
+/*
+ * The report, scoped to one session, in a tab beside the LCWO one.
+ *
+ * app.js reads its whole filter off the hash, so a session's stats are just
+ * a link. Opened from the LCWO tab so that closing it lands you back there,
+ * ready for Continue Training.
+ */
+function openReport(msg, sender) {
+  const sid = Number(msg.sid), gid = Number(msg.gid);
+  if (!sid || !gid) return {ok: false, error: 'no session to show'};
+  const tab = sender && sender.tab;
+  const where = tab ? {index: tab.index + 1, openerTabId: tab.id, windowId: tab.windowId} : {};
+  return chrome.tabs.create(Object.assign({
+    url: chrome.runtime.getURL('src/ext/report.html') + '#gid=' + gid + '&sid=' + sid,
+    active: true,
+  }, where)).then(() => ({ok: true}));
 }
 
 async function badge(text, color) {

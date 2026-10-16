@@ -180,8 +180,8 @@
       ended_at: o.at || nowIso(),
     });
     const runs = await store.sessionRuns(db, session.id);
-    return {ok: true, runId: id, sessionId: session.id, startedSession: started,
-            run: runs.length, closed: true};
+    return {ok: true, runId: id, sessionId: session.id, groupId: session.group_id,
+            startedSession: started, run: runs.length, closed: true};
   }
 
   /* ---------- the bar's own controls ---------- */

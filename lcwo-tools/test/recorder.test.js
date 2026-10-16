@@ -59,6 +59,8 @@ exports.run = async function (check) {
     check('the group is named for the first assignment',
           (await store.liveGroups(db, oid))[0].label === 'S1HW1');
     check('and the session is closed by the result', r.closed);
+    check('and says which session and group, so its stats can be opened',
+          r.sessionId && r.groupId === (await store.liveGroups(db, oid))[0].id);
 
     const s = await store.getGroup(db, (await store.liveGroups(db, oid))[0].id);
     const view = rollup.groupView(await store.loadGroup(db, s.id));

@@ -115,7 +115,10 @@ moves to the next session when **Continue Training** loads the next exercise.
 **Submitting is all you have to do.** When LCWO grades an attempt, the bar
 picks the result up and stores it — the sent groups, what you copied, LCWO's
 own error count per group, the speed it actually sent at, and how long it
-took. The session closes itself.
+took. The session closes itself, and the report opens in a tab beside LCWO,
+scoped to that session, so you can see how it went. Close the tab and you are
+back on LCWO, ready for **Continue Training**. Reloading the graded page does not
+open it again, but **Session stats** on the bar does.
 
 **Record run** empties the box and puts the cursor back in it, ready for the
 replay — what you typed is in the database, so leaving it on screen would
