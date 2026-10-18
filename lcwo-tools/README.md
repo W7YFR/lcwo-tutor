@@ -115,10 +115,10 @@ moves to the next session when **Continue Training** loads the next exercise.
 **Submitting is all you have to do.** When LCWO grades an attempt, the bar
 picks the result up and stores it — the sent groups, what you copied, LCWO's
 own error count per group, the speed it actually sent at, and how long it
-took. The session closes itself, and the report opens in a tab beside LCWO,
-scoped to that session, so you can see how it went. Close the tab and you are
-back on LCWO, ready for **Continue Training**. Reloading the graded page does not
-open it again, but **Session stats** on the bar does.
+took. The session closes itself, and a big **Session stats →** button appears
+at the top of LCWO's results. It opens the report in a tab beside LCWO, scoped
+to that session. Close the tab and you are back on LCWO, ready for **Continue
+Training**.
 
 **Record run** empties the box and puts the cursor back in it, ready for the
 replay — what you typed is in the database, so leaving it on screen would
@@ -159,7 +159,9 @@ coming back to it later changes nothing.
 On the graded page every row of LCWO's results table gets a **▶** that plays
 that one group again, and the groups you got wrong are shaded. Above the table,
 **Replay misses** plays only those, **Replay all** plays the whole clip again,
-and **Stop** stops.
+and **Stop** stops. While a replay runs, the groups still to come are tinted
+blue and the one sounding now is highlighted in yellow, moving down the table
+as it goes.
 
 Playback uses LCWO's own Morse library (jscwlib, which every LCWO page already
 loads), at the speeds the result says it was sent at, honouring the **Use REAL

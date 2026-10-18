@@ -475,13 +475,14 @@ exports.run = function (check) {
   check('and hides once there is nothing open to close',
         /els\.closeGroup\.hidden = !open;/.test(HUD_JS));
 
-  check('a freshly recorded result opens that session in the report',
-        /action: 'open-report', sid: r\.sessionId, gid: r\.groupId/.test(HUD_JS)
+  check('a finished session offers its stats on the page',
+        /id = 'lcwo-tools-stats'/.test(HUD_JS)
+        && /action: 'open-report', sid: shown\.sid, gid: shown\.gid/.test(HUD_JS)
         && /'open-report':/.test(BG) && /#gid=' \+ gid \+ '&sid=' \+ sid/.test(BG));
-  check('but not on a reload, which is skipped before it gets there',
-        HUD_JS.indexOf("if (r.skipped)") < HUD_JS.indexOf("action: 'open-report', sid: r."));
-  check('and the graded page keeps a button to open it again',
-        /lt-stats/.test(HUD_JS) && /els\.stats\.hidden = !shown;/.test(HUD_JS));
+  check('rather than opening a tab by itself when the result lands',
+        !/action: 'open-report', sid: r\./.test(HUD_JS));
+  check('and only on a graded page',
+        /shown = !ex && ctx\.session/.test(HUD_JS) && /statsButton\.hidden = true/.test(HUD_JS));
 
   // recording stores the attempt, so the box should start empty for the replay
   check('recording a run clears the box',

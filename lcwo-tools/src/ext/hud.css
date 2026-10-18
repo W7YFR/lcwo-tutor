@@ -43,8 +43,7 @@ body.lcwo-tools-shifted { padding-top: 46px !important; }
   background: #1aa9ff; border-color: #1aa9ff; color: #041a28; font-weight: 600;
 }
 #lcwo-tools-bar button.lt-data { border-color: #f0736a; }
-#lcwo-tools-bar .lt-data[hidden], #lcwo-tools-bar .lt-close-group[hidden],
-#lcwo-tools-bar .lt-stats[hidden] { display: none; }
+#lcwo-tools-bar .lt-data[hidden], #lcwo-tools-bar .lt-close-group[hidden] { display: none; }
 #lcwo-tools-bar .lt-close {
   background: none; border: none; color: #6b7280; font-size: 15px; padding: 0 4px;
 }
@@ -52,7 +51,13 @@ body.lcwo-tools-shifted { padding-top: 46px !important; }
 
 /* replay.js, on LCWO's own results table: light, like the page around it */
 tr.lcwo-tools-missed td { background: #fff4f2; }
-tr.lcwo-tools-playing td { background: #e3f4ff; }
+/* queued: will play in this replay; playing: sounding right now */
+tr.lcwo-tools-queued td { background: #eaf6ff; }
+/* yellow, so LCWO's red and green letters stay readable under it */
+tr.lcwo-tools-playing td {
+  background: #ffe680; font-weight: 700;
+  box-shadow: inset 0 2px 0 #d4a800, inset 0 -2px 0 #d4a800;
+}
 button.lcwo-tools-replay {
   font: 12px/1.3 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: #0b3a57; background: #f2f8fc; border: 1px solid #9cc9e6;
@@ -60,3 +65,13 @@ button.lcwo-tools-replay {
 }
 button.lcwo-tools-replay:hover { border-color: #1aa9ff; background: #e3f4ff; }
 p.lcwo-tools-replay-bar { margin: 6px 0; }
+
+/* the way into a finished session's stats, on LCWO's results */
+button#lcwo-tools-stats {
+  display: block; margin: 0 0 12px; padding: 10px 22px; cursor: pointer;
+  font: 600 16px/1.2 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #041a28; background: #1aa9ff; border: 0; border-radius: 9px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+}
+button#lcwo-tools-stats:hover { background: #4cbcff; }
+button#lcwo-tools-stats[hidden] { display: none; }

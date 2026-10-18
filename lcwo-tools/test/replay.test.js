@@ -12,7 +12,7 @@
 const fs = require('fs');
 const {same} = require('./harness.js');
 const {documentFrom} = require('./dom.js');
-const {rowsInPage, speedInPage, pick, textOf} = require('../src/ext/replay.js');
+const {rowsInPage, speedInPage, pick, textOf, groupAt} = require('../src/ext/replay.js');
 const {readGradedInPage} = require('../src/ext/capture.js');
 
 const FIXTURES = __dirname + '/fixtures/';
@@ -40,6 +40,23 @@ exports.run = function (check) {
   check('a row that is not there plays nothing', pick(rows, 9).length === 0);
   check('a clean result has no misses to play',
         pick([{sent: 'ABC', errors: 0}], 'misses').length === 0);
+
+  /* ---------- following along ---------- */
+  // 'PQR STU VWX': jscwlib reports each character's position as it sounds
+  const misses = pick(rows, 'misses');
+  check('the first letters light the first group',
+        groupAt(misses, 0) === 0 && groupAt(misses, 2) === 0);
+  check('the gap between groups lights nothing new', groupAt(misses, 3) === null);
+  check('the next group lights as its first letter sounds',
+        groupAt(misses, 4) === 1 && groupAt(misses, 8) === 2 && groupAt(misses, 10) === 2);
+  check('past the end is nothing', groupAt(misses, 11) === null);
+  check('groups of different lengths still line up',
+        groupAt([{sent: 'A'}, {sent: 'BCDE'}, {sent: 'F'}], 7) === 2
+        && groupAt([{sent: 'A'}, {sent: 'BCDE'}, {sent: 'F'}], 5) === 1);
+  const src0 = fs.readFileSync(__dirname + '/../src/ext/replay.js', 'utf8');
+  check('the callback is in place before play() schedules it',
+        src0.indexOf('player.onCharacterPlay =') > -1
+        && src0.indexOf('player.onCharacterPlay =') < src0.indexOf('make().play('));
 
   const speed = speedInPage();
   check('it plays at the speed the result says it was sent at',

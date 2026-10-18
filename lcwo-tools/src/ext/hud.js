@@ -34,7 +34,6 @@
       '<button type="button" class="lt-record lt-primary">Record run</button>' +
       '<select class="lt-groups"></select>' +
       '<button type="button" class="lt-close-group"></button>' +
-      '<button type="button" class="lt-stats" hidden>Session stats</button>' +
       '<span class="lt-status"></span>' +
       '<button type="button" class="lt-data" hidden>Open the data page</button>' +
       '<button type="button" class="lt-close" title="Hide until the next page load">&times;</button>';
@@ -46,7 +45,6 @@
       record: bar.querySelector('.lt-record'),
       groups: bar.querySelector('.lt-groups'),
       closeGroup: bar.querySelector('.lt-close-group'),
-      stats: bar.querySelector('.lt-stats'),
       status: bar.querySelector('.lt-status'),
       data: bar.querySelector('.lt-data'),
       close: bar.querySelector('.lt-close'),
@@ -54,9 +52,6 @@
     els.record.addEventListener('click', recordRun);
     els.groups.addEventListener('change', switchGroup);
     els.closeGroup.addEventListener('click', finishGroup);
-    els.stats.addEventListener('click', () => {
-      if (shown) ask({action: 'open-report', sid: shown.sid, gid: shown.gid});
-    });
     els.data.addEventListener('click', () => ask({action: 'open-data'}));
     els.close.addEventListener('click', () => {
       bar.classList.add('is-hidden');
@@ -150,7 +145,7 @@
     // a graded page has a finished session whose stats are worth a look
     shown = !ex && ctx.session && ctx.group
       ? {sid: ctx.session.id, gid: ctx.group.id} : null;
-    els.stats.hidden = !shown;
+    drawStats();
     // only an assignment that exists and is open can be finished
     const open = ctx.target && ctx.target.kind === 'group';
     els.closeGroup.hidden = !open;
@@ -166,6 +161,39 @@
     else if (!ex.attempt.length) say('Nothing typed yet.');
     else say(ex.attempt.length + ' of ' + ex.key.length + ' groups typed.');
     return ctx;
+  }
+
+  /*
+   * The way into the session's stats, on the graded page.
+   *
+   * A big button at the top of LCWO's results rather than a tab that opens
+   * by itself: having the page swap out from under you the moment you
+   * submit was jarring, and the stats are one click away when you want them.
+   */
+  let statsButton = null;
+  function drawStats() {
+    if (!shown) {
+      if (statsButton) statsButton.hidden = true;
+      return;
+    }
+    if (!statsButton) {
+      const tables = Array.from(document.querySelectorAll('table'))
+        .filter(t => /Sent Group/.test(t.textContent));
+      const table = tables[tables.length - 1];
+      if (!table) return;
+      statsButton = document.createElement('button');
+      statsButton.type = 'button';
+      statsButton.id = 'lcwo-tools-stats';
+      statsButton.textContent = 'Session stats →';
+      statsButton.title = 'Open the report for this session in a new tab';
+      statsButton.addEventListener('click', () => {
+        if (shown) ask({action: 'open-report', sid: shown.sid, gid: shown.gid});
+      });
+      // top of the cell holding the results, above the Result line
+      const cell = table.parentNode;
+      cell.insertBefore(statsButton, cell.firstChild);
+    }
+    statsButton.hidden = false;
   }
 
   /*
@@ -219,9 +247,6 @@
     if (r.skipped) { say('Already recorded — ' + graded.key.length + ' groups.'); return true; }
     say('Recorded: ' + graded.key.length + ' groups, ' + graded.errors + ' errors at '
         + graded.charWpm + '/' + graded.effWpm + ' wpm. Session closed.', 'ok');
-    // the session just closed, so show how it went - only for a fresh result,
-    // not every time the graded page is reloaded
-    ask({action: 'open-report', sid: r.sessionId, gid: r.groupId});
     return true;
   }
 

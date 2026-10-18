@@ -66,7 +66,25 @@
   /* Groups go out as words, the way LCWO sent them. */
   const textOf = rows => rows.map(r => r.sent).join(' ');
 
-  const api = {rowsInPage, speedInPage, pick, textOf};
+  /*
+   * Which of the rows being played holds character `n` of textOf(rows).
+   *
+   * jscwlib calls onCharacterPlay with the position of each character in the
+   * text as it starts to sound, which is how the highlight follows along. A
+   * space between groups belongs to none of them: null, and the highlight
+   * stays where it is until the next group starts.
+   */
+  function groupAt(rows, n) {
+    let start = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const end = start + rows[i].sent.length;
+      if (n >= start && n < end) return i;
+      start = end + 1;
+    }
+    return null;
+  }
+
+  const api = {rowsInPage, speedInPage, pick, textOf, groupAt};
   if (typeof module === 'object') { module.exports = api; return; }
 
   /* ---------- the page side ---------- */
@@ -84,8 +102,21 @@
   try { theirs = Object.values(window).find(v => v instanceof jscw) || null; } catch (e) { /* default tone */ }
 
   let player = null;
-  const lit = [];
-  const done = () => lit.splice(0).forEach(r => r.tr.classList.remove('lcwo-tools-playing'));
+  // the rows in this replay, and which of them is sounding
+  let queue = [];
+  let current = null;
+  const done = () => {
+    queue.forEach(r => r.tr.classList.remove('lcwo-tools-queued', 'lcwo-tools-playing'));
+    queue = [];
+    current = null;
+  };
+  function light(i) {
+    if (i === null || !queue[i] || queue[i] === current) return;
+    // a group already played drops out, so what is tinted is what is left
+    if (current) current.tr.classList.remove('lcwo-tools-queued', 'lcwo-tools-playing');
+    current = queue[i];
+    current.tr.classList.add('lcwo-tools-playing');
+  }
 
   function make() {
     if (player) return player;
@@ -96,6 +127,8 @@
     player.setEff(speed.eff || speed.wpm);
     player.setReal(speed.real);
     player.onFinished = done;
+    // read when play() schedules its timers, so it has to be set before then
+    player.onCharacterPlay = c => light(groupAt(queue, c.n));
     return player;
   }
 
@@ -108,7 +141,9 @@
     const chosen = pick(rows, which);
     if (!chosen.length) return;
     stop();
-    chosen.forEach(r => { r.tr.classList.add('lcwo-tools-playing'); lit.push(r); });
+    queue = chosen;
+    queue.forEach(r => r.tr.classList.add('lcwo-tools-queued'));
+    light(0);     // lit straight away, not after the start delay
     make().play(textOf(chosen));
   }
 
