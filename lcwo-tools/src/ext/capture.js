@@ -88,7 +88,9 @@ function readGradedInPage() {
 
   const key = [], attempt = [], reported = [];
   for (const tr of Array.from(table.querySelectorAll('tr'))) {
-    const td = Array.from(tr.querySelectorAll('td'));
+    // replay.js adds a play button cell to each row, marked data-lt; the
+    // error count has to stay the last cell LCWO wrote
+    const td = Array.from(tr.querySelectorAll('td')).filter(c => !c.hasAttribute('data-lt'));
     if (td.length < 3) continue;                       // the header row
     const errs = td[td.length - 1].textContent.trim();
     if (!/^\d+$/.test(errs)) continue;

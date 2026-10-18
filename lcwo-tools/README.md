@@ -154,6 +154,20 @@ against this clip would be quietly wrong. And re-recording is impossible:
 every stored result carries a signature, so reloading the graded page or
 coming back to it later changes nothing.
 
+## Replaying what you missed
+
+On the graded page every row of LCWO's results table gets a **▶** that plays
+that one group again, and the groups you got wrong are shaded. Above the table,
+**Replay misses** plays only those, **Replay all** plays the whole clip again,
+and **Stop** stops.
+
+Playback uses LCWO's own Morse library (jscwlib, which every LCWO page already
+loads), at the speeds the result says it was sent at, honouring the **Use REAL
+speed** box. So it should sound like the exercise did. To get at that library
+the script runs in the page's own JavaScript world, not alongside the bar, and
+it only appears on the graded page: an exercise page's table is the previous
+attempt.
+
 ## Your trouble letters, without the clipboard
 
 This is the loop closing. The list used to come out of `make trouble PB=1`,
@@ -272,6 +286,7 @@ Each module reads its dependencies through `require` under node and off
 | `src/ext/report.html` `report.js` | the report page: build the payload, then hand it to app.js |
 | `src/ext/capture.js` | reads an exercise or a result off the LCWO page |
 | `src/ext/hud.js` `hud.css` | the bar on `/groups`; asks the worker to store things |
+| `src/ext/replay.js` | play buttons on the graded table, using LCWO's own jscwlib |
 | `src/ext/practice.html` `practice.js` | sending practice and confusion-pair drills |
 
 The split matters. `chrome.tabs.update` on the active tab dismisses the popup,

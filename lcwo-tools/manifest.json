@@ -39,6 +39,17 @@
         "src/ext/hud.css"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://lcwo.net/groups*",
+        "https://www.lcwo.net/groups*"
+      ],
+      "js": [
+        "src/ext/replay.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle"
     }
   ]
 }
