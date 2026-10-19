@@ -1,0 +1,20 @@
+/*
+ * The replay controls replay.js puts on LCWO's own result tables - Code
+ * Groups and Callsign Training. Light, like the page around them, and every
+ * rule namespaced: this lands in someone else's stylesheet.
+ */
+tr.lcwo-tools-missed td { background: #fff4f2; }
+/* queued: will play in this replay; playing: sounding right now */
+tr.lcwo-tools-queued td { background: #eaf6ff; }
+/* yellow, so LCWO's red and green letters stay readable under it */
+tr.lcwo-tools-playing td {
+  background: #ffe680; font-weight: 700;
+  box-shadow: inset 0 2px 0 #d4a800, inset 0 -2px 0 #d4a800;
+}
+button.lcwo-tools-replay {
+  font: 12px/1.3 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #0b3a57; background: #f2f8fc; border: 1px solid #9cc9e6;
+  border-radius: 6px; padding: 2px 8px; margin: 0 6px 0 0; cursor: pointer;
+}
+button.lcwo-tools-replay:hover { border-color: #1aa9ff; background: #e3f4ff; }
+p.lcwo-tools-replay-bar { margin: 6px 0; }

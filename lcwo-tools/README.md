@@ -163,6 +163,14 @@ and **Stop** stops. While a replay runs, the groups still to come are tinted
 blue and the one sounding now is highlighted in yellow, moving down the table
 as it goes.
 
+**Callsign Training** (`lcwo.net/callsigns`) gets the same treatment once an
+attempt is over: the buttons appear when LCWO shows its *New attempt* link,
+not before, so nothing plays over the exercise. Calls are played one at a
+time with a short gap between them. Each is at the speed it was sent, from the
+WPM column, with the characters held at the page's minimum character speed as
+LCWO does. LCWO's own call links still work (clicking a sent call plays it),
+and clicking one stops any replay that is running so the two never overlap.
+
 Playback uses LCWO's own Morse library (jscwlib, which every LCWO page already
 loads), at the speeds the result says it was sent at, honouring the **Use REAL
 speed** box. So it should sound like the exercise did. To get at that library
@@ -288,7 +296,7 @@ Each module reads its dependencies through `require` under node and off
 | `src/ext/report.html` `report.js` | the report page: build the payload, then hand it to app.js |
 | `src/ext/capture.js` | reads an exercise or a result off the LCWO page |
 | `src/ext/hud.js` `hud.css` | the bar on `/groups`; asks the worker to store things |
-| `src/ext/replay.js` | play buttons on the graded table, using LCWO's own jscwlib |
+| `src/ext/replay.js` `replay.css` | play buttons on the Code Groups and Callsign Training results, using LCWO's own jscwlib |
 | `src/ext/practice.html` `practice.js` | sending practice and confusion-pair drills |
 
 The split matters. `chrome.tabs.update` on the active tab dismisses the popup,

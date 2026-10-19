@@ -43,10 +43,15 @@
     {
       "matches": [
         "https://lcwo.net/groups*",
-        "https://www.lcwo.net/groups*"
+        "https://www.lcwo.net/groups*",
+        "https://lcwo.net/callsigns*",
+        "https://www.lcwo.net/callsigns*"
       ],
       "js": [
         "src/ext/replay.js"
+      ],
+      "css": [
+        "src/ext/replay.css"
       ],
       "world": "MAIN",
       "run_at": "document_idle"

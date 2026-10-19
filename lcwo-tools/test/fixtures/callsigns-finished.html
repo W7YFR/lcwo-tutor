@@ -1,0 +1,73 @@
+<!--
+  The shape of lcwo.net/callsigns, with invented calls. LCWO fills #calltable
+  row by row from script as you answer; this is the table after an attempt,
+  with the "New attempt" link the page writes into #newattemptdiv when it
+  is over. A miss comes back as a red span around what you typed, with a
+  trailing &nbsp;. Rows not reached yet are dashes.
+
+  Copied structurally from a real page - the call links, the span, the
+  speed column - with the page chrome (log-in name, who is online) left out.
+-->
+<html><body>
+<h1 id="header1">Callsign Training - Attempt finished!</h1>
+<script type="text/javascript">
+var calls = new Array();
+var cwspeed = 10;
+var mincharspeed = 25;
+var freq = 500;
+</script>
+<table width="100%">
+<tbody><tr>
+<td width="25%">
+
+<table id="calltable" border="1" width="80%">
+<tbody><tr>
+<th width="40%">sent</th><th width="40%">received</th><th>WPM</th>
+</tr>
+<tr>
+<td class="smalltd"><a href="javascript:playcall(0, true, 10);document.getElementById('callentry').focus();">K1ABC</a></td>
+<td class="smalltd">K1ABC</td>
+<td class="smalltd">10</td>
+</tr>
+<tr>
+<td class="smalltd"><a href="javascript:playcall(1, true, 11);document.getElementById('callentry').focus();">DL2XYZ</a></td>
+<td class="smalltd">DL2XYZ</td>
+<td class="smalltd">11</td>
+</tr>
+<tr>
+<td class="smalltd"><a href="javascript:playcall(2, true, 12);document.getElementById('callentry').focus();">G4QRP</a></td>
+<td class="smalltd"><span style="color:#ff0000;font-weight:bold;">G4QRB&nbsp;</span></td>
+<td class="smalltd">12</td>
+</tr>
+<tr>
+<td class="smalltd"><a href="javascript:playcall(3, true, 11);document.getElementById('callentry').focus();">JA1ZZ</a></td>
+<td class="smalltd">JA1ZZ</td>
+<td class="smalltd">11</td>
+</tr>
+<tr>
+<td class="smalltd"><a href="javascript:playcall(4, true, 30);document.getElementById('callentry').focus();">9A5WW</a></td>
+<td class="smalltd"><span style="color:#ff0000;font-weight:bold;">9A5W&nbsp;</span></td>
+<td class="smalltd">30</td>
+</tr>
+<tr>
+<td class="smalltd">-</td>
+<td class="smalltd">-</td>
+<td class="smalltd">-</td>
+</tr>
+<tr>
+<td class="smalltd">-</td>
+<td class="smalltd">-</td>
+<td class="smalltd">-</td>
+</tr>
+</tbody></table>
+
+</td>
+<td valign="top">
+<p>Current speed: <span id="curspeed">-</span>WPM - max. speed: <span id="maxspeed">11</span>WPM</p>
+<p>Score: <span id="score">120</span></p>
+<div id="entryform"></div>
+<div id="newattemptdiv"><p><a href="/callsigns" id="newattempt">New attempt.</a></p></div>
+</td>
+</tr>
+</tbody></table>
+</body></html>
