@@ -327,4 +327,22 @@ exports.run = async function (check) {
           (await recorder.reopenGroup(db, gid)).reopened
           && (await recorder.context(db, {})).target.id === gid);
   }
+
+  /* ---------- switching on a graded page ---------- */
+  //
+  // The case that caught this: a clip graded into S13HW1 when it was meant
+  // for S13HW2, so S13HW2 was made from the bar on the graded page. The
+  // switch took, but the select snapped back to S13HW1 because the target
+  // followed the graded session's group rather than where the next run goes.
+  {
+    const {db} = await fresh();
+    await recorder.recordResult(db, result(['MNO', 'PQR', 'STU', 'VWX'], [0, 0, 0, 0]));
+    const made = await recorder.newGroup(db, 'S1HW2');
+    const graded = await recorder.context(db, {key: KEY, finished: true});
+    check('the graded page still names the group it was graded in',
+          graded.group.label === 'S1HW1');
+    check('but targets the group just switched to',
+          graded.target.kind === 'group' && graded.target.id === made.gid,
+          JSON.stringify(graded.target));
+  }
 };

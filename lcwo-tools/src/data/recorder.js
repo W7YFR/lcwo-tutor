@@ -102,7 +102,10 @@
     const all = op ? await store.liveGroups(db, op.id) : [];
     const name = g => g.label || g.assignment;
     const brief = g => ({id: g.id, label: name(g)});
-    const open = group && !group.closed_at ? group : null;
+    // where the next run lands, which on a graded page need not be the group
+    // the graded session is in - switching after submitting moves this on
+    const current = op ? await currentGroup(db, op.id) : null;
+    const open = session && group && !group.closed_at && !finished ? group : current;
     return {
       operator: op ? {id: op.id, callsign: op.callsign, name: op.name} : null,
       group: group ? {id: group.id, label: name(group), closed: !!group.closed_at} : null,
