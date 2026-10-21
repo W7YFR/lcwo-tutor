@@ -43,6 +43,8 @@ const RECORDING = {
   'use-group': (db, msg) => LCWO.recorder.useGroup(db, msg.gid),
   'close-group': (db, msg) => LCWO.recorder.closeGroup(db, msg.gid),
   'reopen-group': (db, msg) => LCWO.recorder.reopenGroup(db, msg.gid),
+  'move-session': (db, msg) => LCWO.recorder.moveSession(db, msg.sid, msg.gid),
+  'move-session-new': (db, msg) => LCWO.recorder.moveToNewGroup(db, msg.sid, msg.label),
   suggest: db => LCWO.recorder.suggestLabel(db),
   // a content script cannot open extension pages itself
   'open-data': () => chrome.runtime.openOptionsPage().then(() => ({ok: true})),

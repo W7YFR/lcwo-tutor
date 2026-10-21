@@ -245,6 +245,54 @@
             reopened: !!g.closed_at};
   }
 
+  /*
+   * Refile a session under another assignment.
+   *
+   * For the clip that graded into last homework because it was never closed.
+   * It goes on the end of the new group and leaves a gap in the old one:
+   * renumbering would change what older reports call a session. Moving it
+   * back puts it back where it was, so there is nothing to confirm. Only an
+   * open group takes it - a closed one has said it is done.
+   */
+  async function moveSession(db, sid, gid) {
+    const op = await store.currentOperator(db);
+    const s = await store.getSession(db, sid);
+    if (!s) return {ok: false, error: 'no such session'};
+    const from = await store.getGroup(db, s.group_id);
+    const to = await store.getGroup(db, gid);
+    if (!to || (op && to.operator_id !== op.id)) return {ok: false, error: 'no such group'};
+    const label = to.label || to.assignment;
+    if (to.closed_at) {
+      return {ok: false, error: label + ' is closed - reopen it before moving into it'};
+    }
+    if (to.id === s.group_id) return {ok: true, gid: to.id, label: label, seq: s.seq, already: true};
+    const seq = await store.nextSessionSeq(db, to.id);
+    await store.updateSession(db, s.id, {group_id: to.id, seq: seq, assignment: to.assignment});
+    // moving it there says that is the homework you are on
+    await store.setSetting(db, 'group_id', to.id);
+    return {ok: true, gid: to.id, label: label, seq: seq,
+            from: from ? from.label || from.assignment : null};
+  }
+
+  /*
+   * Refile a session as the first of a new assignment.
+   *
+   * The usual way a clip lands in the wrong place: last homework was never
+   * closed, so today's first clip went into it. Starting the new one says
+   * the old one is done, so it is closed too - the Closed entries reopen it.
+   */
+  async function moveToNewGroup(db, sid, label) {
+    const s = await store.getSession(db, sid);
+    if (!s) return {ok: false, error: 'no such session'};
+    const made = await newGroup(db, label);
+    if (!made.ok) return made;
+    const moved = await moveSession(db, sid, made.gid);
+    if (!moved.ok) return moved;
+    const old = await store.getGroup(db, s.group_id);
+    const closed = old && !old.closed_at ? (await closeGroup(db, old.id)).label : null;
+    return Object.assign(moved, {created: true, closed: closed});
+  }
+
   /* What the next assignment would be called, for the bar to suggest. */
   async function suggestLabel(db) {
     const op = await store.currentOperator(db);
@@ -254,7 +302,8 @@
   }
 
   Object.assign(X, {targetGroup, currentGroup, sessionForKey, context, recordRun, recordResult,
-                    newGroup, useGroup, closeGroup, reopenGroup, suggestLabel});
+                    newGroup, useGroup, closeGroup, reopenGroup, moveSession, moveToNewGroup,
+                    suggestLabel});
 })(typeof module === 'object' ? module.exports : (self.LCWO.recorder = {}),
    typeof require === 'function' ? require('./store.js') : self.LCWO.store,
    typeof require === 'function' ? require('../core/assign.js') : self.LCWO.assign,

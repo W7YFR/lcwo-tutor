@@ -82,7 +82,7 @@
   const esc = s => String(s == null ? '' : s)
     .replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
 
-  function drawGroups(ctx) {
+  function drawGroups(ctx, graded) {
     const sel = els.groups;
     sel.innerHTML = '';
     const add = (parent, value, label) => {
@@ -115,6 +115,17 @@
       const done = group('Closed');
       for (const g of ctx.closedGroups) add(done, 'reopen:' + g.id, g.label);
     }
+    // the graded page is where you find out a clip went into the wrong
+    // homework, so the way to refile it is here too
+    // homework, so the way to refile it is here too. Usually it belongs in
+    // an assignment that does not exist yet, so that is always offered.
+    if (graded && ctx.session && ctx.group) {
+      const move = group('Move session ' + ctx.session.seq + ' to');
+      for (const g of ctx.openGroups || []) {
+        if (g.id !== ctx.group.id) add(move, 'move:' + g.id, g.label);
+      }
+      add(move, 'move:new', 'New assignment…');
+    }
 
     sel.value = ctx.target && ctx.target.kind === 'group'
       ? String(ctx.target.id) : 'auto';
@@ -139,12 +150,12 @@
     const ctx = await ask({action: 'context', page: pageContext(ex)});
     if (!ctx) return;
     drawWhere(ctx);
-    drawGroups(ctx);
+    drawGroups(ctx, !ex);
     els.record.disabled = !ex || !ex.attempt.length || !ctx.operator;
     els.data.hidden = !!ctx.operator;
     // a graded page has a finished session whose stats are worth a look
     shown = !ex && ctx.session && ctx.group
-      ? {sid: ctx.session.id, gid: ctx.group.id} : null;
+      ? {sid: ctx.session.id, gid: ctx.group.id, open: ctx.group.closed ? null : ctx.group.label} : null;
     drawStats();
     // only an assignment that exists and is open can be finished
     const open = ctx.target && ctx.target.kind === 'group';
@@ -261,6 +272,29 @@
       return refresh(back && back.ok ? 'Reopened ' + back.label + '.'
                      : (back && back.error) || 'Could not reopen that.',
                      back && back.ok ? 'ok' : 'bad');
+    }
+    if (value === 'move:new') {
+      if (!shown) return refresh();
+      const suggested = (await ask({action: 'suggest'})) || '';
+      const label = window.prompt('Move this session into a new assignment named'
+                                  + (shown.open ? '\n(' + shown.open + ' will be closed)' : ''),
+                                  suggested);
+      if (label === null) return refresh();
+      const moved = await ask({action: 'move-session-new', sid: shown.sid, label: label});
+      return refresh(moved && moved.ok
+                     ? 'Moved to ' + moved.label + ' as session ' + moved.seq
+                       + (moved.closed ? ', closed ' + moved.closed : '') + '.'
+                     : (moved && moved.error) || 'Could not move that.',
+                     moved && moved.ok ? 'ok' : 'bad');
+    }
+    if (value.startsWith('move:')) {
+      if (!shown) return refresh();
+      const moved = await ask({action: 'move-session', sid: shown.sid,
+                               gid: Number(value.slice(5))});
+      return refresh(moved && moved.ok
+                     ? 'Moved to ' + moved.label + ' as session ' + moved.seq + '.'
+                     : (moved && moved.error) || 'Could not move that.',
+                     moved && moved.ok ? 'ok' : 'bad');
     }
     if (value === 'new') {
       const suggested = (await ask({action: 'suggest'})) || '';

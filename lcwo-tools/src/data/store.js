@@ -283,6 +283,11 @@
     return (await liveRuns(db)).find(r => r.signature === signature) || null;
   }
 
+  async function getSession(db, sid) {
+    const s = await db.get('sessions', Number(sid));
+    return s === undefined || !s || s.deleted_at ? null : s;
+  }
+
   async function updateSession(db, sid, fields) {
     const s = await db.get('sessions', Number(sid));
     if (!s) throw new Error('no such session: ' + sid);
@@ -520,7 +525,7 @@
     createGroup, getGroup, getGroupAny, openGroups, lastGroup, updateGroup,
     closeGroup, reopenGroup,
     lastSettings, startSession, addRun, finishSession, groupSessions, sessionRuns,
-    openSessionForKey, runBySignature, updateSession, closeSession,
+    openSessionForKey, runBySignature, getSession, updateSession, closeSession,
     binRecord, restoreRecord, trash, purge, pruneEmpty,
     loadGroup, loadAll, dump, load, summary, daysSinceExport,
     KINDS,

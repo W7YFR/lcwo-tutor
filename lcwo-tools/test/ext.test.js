@@ -464,6 +464,14 @@ exports.run = function (check) {
         /action: 'open-data'/.test(HUD_JS) && /openOptionsPage/.test(BG));
   check('closed assignments are listed so they can be found',
         /closedGroups/.test(HUD_JS) && /reopen:/.test(HUD_JS));
+  check('a graded session can be moved to another open assignment',
+        /'move:' \+ g\.id/.test(HUD_JS) && /action: 'move-session'/.test(HUD_JS)
+        && /'move-session'/.test(BG));
+  check('or into a new assignment, which is usually where it belongs',
+        /'move:new'/.test(HUD_JS) && /action: 'move-session-new'/.test(HUD_JS)
+        && /'move-session-new'/.test(BG));
+  check('but only from the graded page, and not into its own group',
+        /drawGroups\(ctx, !ex\)/.test(HUD_JS) && /g\.id !== ctx\.group\.id/.test(HUD_JS));
   check('reopening one asks first, since closing meant something',
         /window\.confirm\(/.test(HUD_JS));
   check('an assignment can be finished from the bar',

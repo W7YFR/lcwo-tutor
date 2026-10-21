@@ -345,4 +345,102 @@ exports.run = async function (check) {
           graded.target.kind === 'group' && graded.target.id === made.gid,
           JSON.stringify(graded.target));
   }
+
+  /* ---------- refiling a graded session ---------- */
+  //
+  // Making the right group on the graded page fixes where the next clip
+  // goes, not where this one went. Moving it is the rest of the repair.
+  {
+    const {db} = await fresh();
+    await recorder.recordResult(db, result(['ABC'], [0], ['ABC']));
+    await recorder.recordResult(db, result(['DEF'], [0], ['DEF']));
+    const r = await recorder.recordResult(db, result(['MNO', 'PQR', 'STU', 'VWX'], [0, 0, 0, 0]));
+    const first = r.groupId;
+    const made = await recorder.newGroup(db, 'S1HW2');
+    await store.setSetting(db, 'group_id', first);   // as if still pointed at the old one
+
+    const moved = await recorder.moveSession(db, r.sessionId, made.gid);
+    check('a session moves to another open group', moved.ok && moved.label === 'S1HW2'
+          && moved.from === 'S1HW1', JSON.stringify(moved));
+    const s = await store.getSession(db, r.sessionId);
+    check('and becomes the next session there', s.group_id === made.gid && s.seq === 1
+          && moved.seq === 1 && s.assignment === 'S1HW2');
+    check('its runs come with it, being joined by session',
+          (await store.sessionRuns(db, r.sessionId)).length === 1);
+    check('the old group keeps the rest, numbers unchanged',
+          same((await store.groupSessions(db, first)).map(x => x.seq), [1, 2]));
+    check('and the group it moved to is where recording goes now',
+          String(await store.getSetting(db, 'group_id')) === String(made.gid));
+    const graded = await recorder.context(db, {key: KEY, finished: true});
+    check('the graded page now names the group it moved to',
+          graded.group.id === made.gid && graded.session.seq === 1);
+
+    const back = await recorder.moveSession(db, r.sessionId, first);
+    check('moving it back puts it back as it was',
+          back.ok && (await store.getSession(db, r.sessionId)).seq === 3);
+    check('moving it to where it already is changes nothing',
+          (await recorder.moveSession(db, r.sessionId, first)).already === true
+          && (await store.getSession(db, r.sessionId)).seq === 3);
+
+    await recorder.closeGroup(db, made.gid);
+    const shut = await recorder.moveSession(db, r.sessionId, made.gid);
+    check('a closed group takes no sessions', !shut.ok && /closed/.test(shut.error));
+    check('and the session stays put',
+          (await store.getSession(db, r.sessionId)).group_id === first);
+    check('moving into a group that is not there fails',
+          !(await recorder.moveSession(db, r.sessionId, 9999)).ok);
+    check('moving a session that is not there fails',
+          !(await recorder.moveSession(db, 9999, first)).ok);
+  }
+
+  /* ---------- refiling into a new assignment ---------- */
+  //
+  // The case that caught this: S13HW3 never closed, so today's first clip
+  // went into it as session 3. Its real home, S14HW1, did not exist, and the
+  // move list offered only a stale S2HW3 that happened to be open.
+  {
+    const {db, oid} = await fresh();
+    const stale = await store.createGroup(db, {operator_id: oid, assignment: 'S2HW3',
+                                               label: 'S2HW3'});
+    const hw3 = await store.createGroup(db, {operator_id: oid, assignment: 'S13HW3',
+                                             label: 'S13HW3'});
+    await store.setSetting(db, 'group_id', hw3);
+    await recorder.recordResult(db, result(['ABC'], [0], ['ABC']));
+    await recorder.recordResult(db, result(['DEF'], [0], ['DEF']));
+    const r = await recorder.recordResult(db, result(['MNO', 'PQR', 'STU', 'VWX'], [0, 0, 0, 0]));
+    check('the clip lands in the unclosed homework', r.groupId === hw3);
+
+    const label = await recorder.suggestLabel(db);
+    check('the next assignment is suggested', label === 'S14HW1', label);
+    const moved = await recorder.moveToNewGroup(db, r.sessionId, label);
+    const s = await store.getSession(db, r.sessionId);
+    const made = await store.getGroup(db, s.group_id);
+    check('the session becomes the first of a new assignment',
+          moved.ok && moved.created && made.label === 'S14HW1' && s.seq === 1,
+          JSON.stringify(moved));
+    check('the homework it left is closed', moved.closed === 'S13HW3'
+          && !!(await store.getGroup(db, hw3)).closed_at);
+    check('keeping the sessions that were really its own',
+          same((await store.groupSessions(db, hw3)).map(x => x.seq), [1, 2]));
+    check('an unrelated open group is left alone',
+          !(await store.getGroup(db, stale)).closed_at);
+    const ctx = await recorder.context(db, {});
+    check('and the new one is where recording goes',
+          ctx.target.kind === 'group' && ctx.target.label === 'S14HW1');
+
+    // already in a closed group: nothing more to close
+    await recorder.closeGroup(db, made.id);
+    const again = await recorder.moveToNewGroup(db, r.sessionId, 'S14HW2');
+    check('moving out of a closed group closes nothing',
+          again.ok && again.closed === null && !!(await store.getGroup(db, made.id)).closed_at);
+    check('a session that is not there makes no group',
+          !(await recorder.moveToNewGroup(db, 9999, 'S99HW1')).ok
+          && !(await store.liveGroups(db, oid)).some(g => g.label === 'S99HW1'));
+
+    const other = await store.createOperator(db, 'Other', 'W0OTH');
+    const theirs = await store.createGroup(db, {operator_id: other, assignment: 'S1HW1',
+                                               label: 'S1HW1'});
+    check('nor into another operator\'s group',
+          !(await recorder.moveSession(db, r.sessionId, theirs)).ok);
+  }
 };
